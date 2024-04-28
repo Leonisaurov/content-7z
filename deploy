@@ -1,0 +1,11 @@
+#!/bin/bash
+set -x
+cargo build --release
+cp ./target/release/content-7z $BIN
+read -p "Commit: " commit
+if [[ "$commit" != "" ]]; then
+	git add ./Cargo.lock ./Cargo.toml ./LICENSE ./src ./deploy ./Run
+	git commit -m "$commit"
+	git push origin main
+fi
+set +x

@@ -1,0 +1,4 @@
+#!/bin/bash
+set -x
+cargo run $1
+set +x
