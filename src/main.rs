@@ -149,6 +149,8 @@ struct Window<'a> {
     current: Vec<Folder>,
     width: u16,
     height: u16,
+    scroll_x: u16,
+    scroll_y: u16,
     cursor: Cursor,
     path: String,
     writer: *mut StdoutLock<'a>
@@ -161,6 +163,8 @@ impl<'a> Window<'a> {
             current: vec![Folder::new("")],
             width, 
             height,
+            scroll_x: 0,
+            scroll_y: 0,
             cursor: Cursor { x: 1, y: 4 },
             path: String::new(),
             writer: stdout
@@ -211,6 +215,8 @@ impl<'a> Window<'a> {
     fn move_down(&mut self) {
         if self.cursor.y < self.height - 2 {
             self.cursor.y += 1;
+        } else {
+            self.scroll_y += 1;
         }
     }
 
@@ -382,20 +388,17 @@ fn print_menu(win: &Window) {
     stdout.write(("└".to_string() + fill_all_block.as_str() + "┘").as_bytes()).unwrap();
 }
 
-fn print_lines(win: &mut Window, output: String) {
+fn print_lines(win: &mut Window, lines: &Vec<&str>) {
     let stdout = unsafe { &mut (*win.writer) };
 
     MoveTo(0, 0);
     stdout.flush().unwrap();
-    let mut i = 0;
-    for line in output.split("\n") {
-        if i == win.height {
-            let mut any: String = String::new();
-            io::stdin().read_line(&mut any).unwrap();
-            i = 0;
+
+    for i in usize::from(win.scroll_y)..usize::from(win.scroll_y + win.height) {
+        if i >= lines.len() {
+            break;
         }
-        println!("\r\x1b[K{}", line);
-        i += 1;
+        println!("\r\x1b[K{}", lines[i]);
     }
 }
 
@@ -408,7 +411,7 @@ fn main() {
 
     let mut stdout = stdout().lock();
     stdout.queue(terminal::EnterAlternateScreen).unwrap();
-    stdout.queue(terminal::DisableLineWrap).unwrap();
+    //stdout.queue(terminal::DisableLineWrap).unwrap();
     stdout.queue(terminal::EndSynchronizedUpdate).unwrap();
     terminal::enable_raw_mode().expect("Error al abrir la patalla");
     stdout.flush().unwrap();
@@ -425,6 +428,8 @@ fn main() {
     //println!("El resultado es:\n{}", output);
 
     let path = get_path(output.clone());
+    let binding = output.clone();
+    let lines: Vec<&str> = binding.split("\n").collect();
     let mut mouse_update = false;
     win.assign_path(path);
     win.assign_root(get_root(output.clone()));
@@ -445,6 +450,9 @@ fn main() {
                         KeyCode::Down => {
                             win.move_down();
                             mouse_update = true;
+                            if win.cursor.y > win.height - 3 {
+                                print_lines(&mut win, &lines);
+                            }
                         },
                         KeyCode::Right => {
                             win.move_right();
@@ -467,7 +475,7 @@ fn main() {
                             win.back_current();
                             print_menu(&mut win);
                         },
-                        KeyCode::Tab => print_lines(&mut win, output.clone()),
+                        //KeyCode::Tab => print_lines(&mut win, &lines),
                         _ => {}
                     }
                 },
