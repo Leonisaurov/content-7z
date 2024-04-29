@@ -326,9 +326,9 @@ fn print_header(win: &Window) {
     stdout.queue(MoveTo(0, 1)).unwrap();
     stdout.queue(Clear(ClearType::CurrentLine)).unwrap();
     stdout.write("│".as_bytes()).unwrap();
-    if path.len() > (win.width - 3).into() {
-        stdout.write(&path.as_bytes()[0..path.len() - 3]).unwrap();
+    if path.len() > (win.width - 2).into() {
         stdout.write("...".as_bytes()).unwrap();
+        stdout.write(&path.as_bytes()[path.len() - usize::from(win.width - 5)..path.len()]).unwrap();
     } else {
         stdout.write(path.as_bytes()).unwrap();
     }
