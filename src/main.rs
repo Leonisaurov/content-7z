@@ -26,16 +26,6 @@ struct Folder {
     content: Vec<Entry>,
 }
 
-trait FromStr<T> {
-    fn add_file(&mut self, file_name: T);
-}
-
-impl FromStr<String> for Folder {
-    fn add_file(&mut self, file_name: String) {
-        self.content.push(Entry::File(file_name));
-    } 
-}
-
 impl Folder {
     fn new(name: &str) -> Self {
         Self {
@@ -335,7 +325,7 @@ impl FromDif for Stdout {
 
 fn print_header(win: &Window) {
     let fill_all_block = "─".repeat(usize::from(win.width) - 2);
-    let mut stdout = unsafe { &mut (*win.writer) };
+    let stdout = unsafe { &mut (*win.writer) };
     let path = win.get_path();
 
     stdout.queue(MoveTo(0, 0)).unwrap();
@@ -392,6 +382,23 @@ fn print_menu(win: &Window) {
     stdout.write(("└".to_string() + fill_all_block.as_str() + "┘").as_bytes()).unwrap();
 }
 
+fn print_lines(win: &mut Window, output: String) {
+    let stdout = unsafe { &mut (*win.writer) };
+
+    MoveTo(0, 0);
+    stdout.flush().unwrap();
+    let mut i = 0;
+    for line in output.split("\n") {
+        if i == win.height {
+            let mut any: String = String::new();
+            io::stdin().read_line(&mut any).unwrap();
+            i = 0;
+        }
+        println!("\r\x1b[K{}", line);
+        i += 1;
+    }
+}
+
 fn main() {
     let args: Vec<String> = args().collect();
     if args.len() != 2 {
@@ -420,7 +427,7 @@ fn main() {
     let path = get_path(output.clone());
     let mut mouse_update = false;
     win.assign_path(path);
-    win.assign_root(get_root(output));
+    win.assign_root(get_root(output.clone()));
     print_header(&mut win);
     print_menu(&mut win);
 
@@ -460,6 +467,7 @@ fn main() {
                             win.back_current();
                             print_menu(&mut win);
                         },
+                        KeyCode::Tab => print_lines(&mut win, output.clone()),
                         _ => {}
                     }
                 },
