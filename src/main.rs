@@ -270,11 +270,6 @@ impl<'a> Window<'a> {
 
 fn get_root(output: String) -> Folder {
     let mut root = Folder::new(".");
-    if output == "" {
-        return root;
-    }
-
-    eprintln!("Out: {}", output);
 
     let start_point: usize = output.find("   Date      Time    Attr         Size   Compressed  Name\n------------------- ----- ------------ ------------  ------------------------\n").expect("The content isn't be found") + "   Date      Time    Attr         Size   Compressed  Name\n------------------- ----- ------------ ------------  ------------------------\n".len();
     let clean_output = &output[start_point..];
