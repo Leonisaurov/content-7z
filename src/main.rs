@@ -270,6 +270,11 @@ impl<'a> Window<'a> {
 
 fn get_root(output: String) -> Folder {
     let mut root = Folder::new(".");
+    if output == "" {
+        return root;
+    }
+
+    eprintln!("Out: {}", output);
 
     let start_point: usize = output.find("   Date      Time    Attr         Size   Compressed  Name\n------------------- ----- ------------ ------------  ------------------------\n").expect("The content isn't be found") + "   Date      Time    Attr         Size   Compressed  Name\n------------------- ----- ------------ ------------  ------------------------\n".len();
     let clean_output = &output[start_point..];
@@ -411,8 +416,15 @@ fn main() {
 
     let res = Command::new("7z")
         .args(vec!["l", &args[1]])
-        .output()
-        .expect("Ubo un error al ejecutar el commando!");
+        .output().expect("Error al obtener los datos del archivo!");
+    if String::from_utf8(res.stderr.clone()).unwrap() != "" {
+        terminal::disable_raw_mode().unwrap();
+        stdout.queue(terminal::LeaveAlternateScreen).unwrap();
+        stdout.flush().unwrap();
+        eprintln!("Process Error: {}", String::from_utf8(res.stderr).unwrap());
+        exit(-1);
+    }
+
     let output = String::from_utf8(res.stdout).expect("No se pudo convertir la salida a texto");
     win.assign_root(get_root(output.clone()));
     //eprintln!("El resultado es:\n{}", output);
@@ -458,8 +470,8 @@ fn main() {
                             mouse_update = true;
                         },
                         KeyCode::Enter => {
-                            if usize::from(win.cursor.y - 4) < win.get_current().content.len() {
-                                if let Entry::Folder(dir) = &win.get_current().content[usize::from(win.cursor.y - 4)] {
+                            if usize::from(win.cursor.y - 4 + win.scroll_y) < win.get_current().content.len() {
+                                if let Entry::Folder(dir) = &win.get_current().content[usize::from(win.cursor.y - 4 + win.scroll_y)] {
                                     win.set_current(dir.clone());
                                     mouse_update = true;
                                     print_menu(&mut win);
