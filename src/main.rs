@@ -73,7 +73,7 @@ impl Folder {
 
     fn add_entry(&mut self, entry: &str, file_type: &EntryType) {
         //println!("{}", entry);
-        for i in 0..entry.len() + 1 {
+        for i in 0..entry.len() {
             if let Some(character) = entry.get(i..i+1) {
                 if character == "/" {
                     if let Some(path) = entry.get(0..i) {
@@ -81,8 +81,12 @@ impl Folder {
                             if let Some(sub_path) = entry.get(i+1..entry.len()) {
                                 if let Some(folder) = self.get_folder(path) {
                                     folder.add_entry(sub_path, file_type);
-                                    break;
+                                    return;
+                                } else {
+                                    eprintln!("No folder found");
                                 }
+                            } else {
+                                eprintln!("The subdir cannot be get");
                             }
                             //println!("In the Main Folder {}.", path);
                         }
@@ -94,26 +98,29 @@ impl Folder {
                         }
                         //println!("In the Main Folder {}.", path);
                         self.add_folder(new_entry);
-                        
-                    }
-                    break;
-                }
-            } else {
-                if let Some(path) = entry.get(0..i) {
-                    if let EntryType::Folder = file_type {
-                        //println!("Main Folder {} Added withouth follow.", path);
-                        self.add_folder(Folder::new(path))
+
                     } else {
-                        //println!("File {} added.", path);
-                        self.add_file(path);
+                        eprintln!("The subdir cannot be get");
                     }
-                } else {
-                    //println!("No se pudo?");
+                    return;
                 }
-                break;
             }
         }
+
+        if let Some(path) = entry.get(0..entry.len()) {
+            if let EntryType::Folder = file_type {
+                //println!("Main Folder {} Added withouth follow.", path);
+                self.add_folder(Folder::new(path))
+            } else {
+                //println!("File {} added.", path);
+                self.add_file(path);
+            }
+        } else {
+            //println!("No se pudo?");
+        }
+
     }
+
     
     fn strace(&self, indent: usize) {
         let indent_char = " ".repeat(indent);
@@ -253,64 +260,48 @@ fn get_root(output: String) -> Folder {
     let mut name_indicate: u8 = 0;
     let mut file_type: &EntryType = &EntryType::File;
 
-    loop {
-        if let Some(character) = output.get(start_point..(start_point + 1)) {
-            //println!("Found: {}", character);
-            if character == " " || character == "\t" || character == "\n" {
-                //println!("Relleno");
-                start_point += 1;
-                continue;
-            }
+    let mut get_flag = false;
+    let mut init_point = start_point;
 
-            let init_point = start_point;
-            loop {
-                if let Some(character) = output.get(start_point..(start_point + 1)) {
-                    //println!("Found in word: {}", character);
-                    if name_indicate == 5 {
-                        if character == "\n" {
+    loop {
+        if let Some(character) = output.get(start_point..start_point+1) {
+            if character == " " || character == "\t" || character == "\n" {
+                if get_flag {
+                    /*if name_indicate == 5 && character == " " {
+                        start_point += 1;
+                        continue;
+                    }*/
+                    if let Some(part) = output.get(init_point..start_point) {
+                        if name_indicate == 5 {
+                            root.add_entry(part, file_type);
+                            name_indicate = 0;
+                        } else if name_indicate == 0 && part == "-------------------" {
                             break;
+                        } else {
+                            if name_indicate == 2 {
+                                if part == "D...." {
+                                    file_type = &EntryType::Folder
+                                } else {
+                                    file_type = &EntryType::File
+                                }
+                            }
+                            name_indicate += 1;
                         }
-                    } else if character == "\n" || character == "\t" || character == " " {
-                        //println!("Relleno final");
+                    } else {
                         break;
                     }
-                    start_point += 1;
-                } else {
-                    break;
+                    get_flag = false;
                 }
-
-            }
-
-            if name_indicate == 5 {
-                if let Some(path) = output.get(init_point..start_point) {
-                    //println!("Added {} To Root, was a {:?}", path, file_type);
-                    root.add_entry(path, file_type);
-                    name_indicate = 0;
-                } else {
-                    break;
-                }
-            } else if name_indicate == 2 {
-                if let Some(meta_data) = output.get(init_point..start_point) {
-                    if meta_data == "D...." {
-                        file_type = &EntryType::Folder;
-                    } else {
-                        file_type = &EntryType::File;
-                    }
-                }
-                name_indicate += 1;
-            } else {
-                if name_indicate == 0 { 
-                    if let Some(path) = output.get(init_point..start_point) {
-                        if path == "-------------------" {
-                            break;
-                        }
-                    }
-                }
-                name_indicate += 1;
+                start_point += 1;
+                continue;
+            } else if !get_flag {
+                get_flag = true;
+                init_point = start_point;
             }
         } else {
             break;
         }
+        start_point += 1;
     }
 
     root

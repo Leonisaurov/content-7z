@@ -1,0 +1,81 @@
+   Compiling content-7z v0.1.0 (/data/data/com.termux/files/home/Develop/Rust/content-7z)
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `/data/data/com.termux/files/home/Develop/Rust/content-7z/target/debug/incremental/content_7z-1kri2v4dkq1l2/s-gvozll4qis-13ouo6h-working`
+
+warning: unused imports: `Clear`, `KeyEvent`, `MouseButton`, `MouseEventKind`
+ --> src/main.rs:5:28
+  |
+5 |     self, terminal::{self, Clear, ClearType}, cursor::MoveTo,
+  |                            ^^^^^
+6 |     QueueableCommand,
+7 |     event::{self, Event, KeyCode, KeyEvent, MouseEventKind, MouseButton}
+  |                                   ^^^^^^^^  ^^^^^^^^^^^^^^  ^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+warning: unused imports: `Stdout`, `self`
+ --> src/main.rs:9:32
+  |
+9 | use std::{time::Duration, io::{self, stdout, Stdout, Write, StdoutLock}, thread};
+  |                                ^^^^          ^^^^^^
+
+warning: unused variable: `lines`
+   --> src/main.rs:438:9
+    |
+438 |     let lines: Vec<&str> = binding.split("\n").collect();
+    |         ^^^^^ help: if this is intentional, prefix it with an underscore: `_lines`
+    |
+    = note: `#[warn(unused_variables)]` on by default
+
+warning: methods `strace` and `print` are never used
+   --> src/main.rs:125:8
+    |
+29  | impl Folder {
+    | ----------- methods in this implementation
+...
+125 |     fn strace(&self, indent: usize) {
+    |        ^^^^^^
+...
+144 |     fn print(&self) {
+    |        ^^^^^
+    |
+    = note: `#[warn(dead_code)]` on by default
+
+warning: field `scroll_x` is never read
+   --> src/main.rs:159:5
+    |
+154 | struct Window<'a> {
+    |        ------ field in this struct
+...
+159 |     scroll_x: u16,
+    |     ^^^^^^^^
+
+warning: method `get_writer` is never used
+   --> src/main.rs:204:8
+    |
+166 | impl<'a> Window<'a> {
+    | ------------------- method in this implementation
+...
+204 |     fn get_writer(&self) -> &mut StdoutLock<'a> {
+    |        ^^^^^^^^^^
+
+warning: function `print_lines` is never used
+   --> src/main.rs:396:4
+    |
+396 | fn print_lines(win: &mut Window, lines: &Vec<&str>) {
+    |    ^^^^^^^^^^^
+
+warning: `content-7z` (bin "content-7z") generated 8 warnings (run `cargo fix --bin "content-7z"` to apply 3 suggestions)
+    Finished dev [unoptimized + debuginfo] target(s) in 1.59s
+     Running `target/debug/content-7z /data/data/com.termux/files/home/.DESKTOP.backup`
+No folder found
+No folder found
+No folder found
+No folder found
+No folder found
+No folder found
+No folder found
+No folder found
+No folder found
+No folder found
+No folder found
+No folder found
