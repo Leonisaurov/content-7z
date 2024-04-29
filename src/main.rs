@@ -8,7 +8,7 @@ use crossterm::{
 };
 use std::{time::Duration, io::{self, stdout, Stdout, Write, StdoutLock}, thread};
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 enum Entry {
     File(String),
     Folder(Folder),
@@ -20,7 +20,7 @@ enum EntryType {
     Folder
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 struct Folder {
     name: String,
     content: Vec<Entry>,
@@ -156,6 +156,7 @@ struct Cursor {
 
 struct Window<'a> {
     root: Folder,
+    current: Vec<Folder>,
     width: u16,
     height: u16,
     cursor: Cursor,
@@ -167,6 +168,7 @@ impl<'a> Window<'a> {
     fn new(width: u16, height: u16, stdout: *mut StdoutLock<'a>) -> Self {
         Self {
             root: Folder::new(""),
+            current: vec![Folder::new("")],
             width, 
             height,
             cursor: Cursor { x: 1, y: 4 },
@@ -176,7 +178,22 @@ impl<'a> Window<'a> {
     }
 
     fn assign_root(&mut self, folder: Folder) {
-        self.root = folder;
+        self.root = folder.clone();
+        self.current = vec![folder];
+    }
+
+    fn get_current(&self) -> &Folder {
+        &self.current[self.current.len() - 1]
+    }
+    
+    fn set_current(&mut self, folder: Folder) {
+        self.current.push(folder);
+    }
+
+    fn back_current(&mut self) {
+        if self.current.len() > 1 {
+            self.current.pop().unwrap();
+        }
     }
 
     fn assign_path(&mut self, path: String) {
@@ -188,6 +205,8 @@ impl<'a> Window<'a> {
             &mut (*self.writer)
         }
     }
+
+
 
     fn get_path(&self) -> String {
         self.path.clone()
@@ -215,6 +234,11 @@ impl<'a> Window<'a> {
         if self.cursor.x < self.width - 2 {
             self.cursor.x += 1;
         }
+    }
+
+    fn set_cursor(&mut self, x: u16, y: u16) {
+        self.cursor.x = x;
+        self.cursor.y = y;
     }
 }
 
@@ -345,9 +369,10 @@ fn print_menu(win: &Window) {
 
     for i in 4..win.height {
         stdout.queue(MoveTo(0, i)).unwrap();
+        stdout.queue(terminal::Clear(ClearType::CurrentLine)).unwrap();
         stdout.write("│".as_bytes()).unwrap();
-        if win.root.content.len() > (i - 4).into() {
-            let entry = &win.root.content[usize::from(i - 4)];
+        if win.get_current().content.len() > (i - 4).into() {
+            let entry = &win.get_current().content[usize::from(i - 4)];
             let _ = match entry {
                 Entry::File(file_name) => {
                     stdout.write("--- ".as_bytes()).unwrap();
@@ -393,6 +418,7 @@ fn main() {
     //println!("El resultado es:\n{}", output);
 
     let path = get_path(output.clone());
+    let mut mouse_update = false;
     win.assign_path(path);
     win.assign_root(get_root(output));
     print_header(&mut win);
@@ -405,17 +431,50 @@ fn main() {
                 Event::Key(ev) => {
                     match ev.code {
                         KeyCode::Esc => break 'mainLoop,
-                        KeyCode::Up => win.move_up(),
-                        KeyCode::Down => win.move_down(),
-                        KeyCode::Right => win.move_right(),
-                        KeyCode::Left => win.move_left(),
+                        KeyCode::Up => {
+                            win.move_up();
+                            mouse_update = true;
+                        },
+                        KeyCode::Down => {
+                            win.move_down();
+                            mouse_update = true;
+                        },
+                        KeyCode::Right => {
+                            win.move_right();
+                            mouse_update = true;
+                        },
+                        KeyCode::Left => {
+                            win.move_left();
+                            mouse_update = true;
+                        },
+                        KeyCode::Enter => {
+                            if usize::from(win.cursor.y - 4) < win.get_current().content.len() {
+                                if let Entry::Folder(dir) = &win.get_current().content[usize::from(win.cursor.y - 4)] {
+                                    win.set_current(dir.clone());
+                                    mouse_update = true;
+                                    print_menu(&mut win);
+                                }
+                            }
+                        },
+                        KeyCode::Backspace => {
+                            win.back_current();
+                            print_menu(&mut win);
+                        },
                         _ => {}
                     }
                 },
                 _ => {}
             }
         }
-        stdout.queue(MoveTo(win.cursor.x, win.cursor.y)).unwrap();
+
+        if mouse_update {
+            let new_y: u16 = (win.get_current().content.len() + 3).try_into().unwrap();
+            if win.cursor.y > new_y && new_y != 3 {
+                win.set_cursor(win.cursor.x, new_y);
+            }
+            stdout.queue(MoveTo(win.cursor.x, win.cursor.y)).unwrap();
+        }
+
         stdout.flush().unwrap();
 
         thread::sleep(Duration::from_millis(30));
