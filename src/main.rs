@@ -72,7 +72,7 @@ impl Folder {
     }
 
     fn add_entry(&mut self, entry: &str, file_type: &EntryType) {
-        //println!("{}", entry);
+        eprintln!("{}", entry);
         for i in 0..entry.len() {
             if let Some(character) = entry.get(i..i+1) {
                 if character == "/" {
@@ -81,22 +81,25 @@ impl Folder {
                             if let Some(sub_path) = entry.get(i+1..entry.len()) {
                                 if let Some(folder) = self.get_folder(path) {
                                     folder.add_entry(sub_path, file_type);
-                                    return;
                                 } else {
-                                    eprintln!("No folder found");
+                                    let mut new_entry = Folder::new(path);
+                                    eprintln!("No folder found: {} / {}", path, sub_path);
+                                    new_entry.add_entry(sub_path, file_type);
+                                    self.add_folder(new_entry);
                                 }
                             } else {
                                 eprintln!("The subdir cannot be get");
                             }
-                            //println!("In the Main Folder {}.", path);
+                            eprintln!("In the Main Folder {}.", path);
+                            return;
                         }
                         let mut new_entry = Folder::new(path);
-                        //println!("Main Folder {} Added.", path);
+                        eprintln!("Main Folder {} Added.", path);
                         if let Some(sub_path) = entry.get(i+1..entry.len()) {
                             new_entry.add_entry(sub_path, file_type);
-                            //println!("Se pudo?");
+                            eprintln!("Se pudo?");
                         }
-                        //println!("In the Main Folder {}.", path);
+                        eprintln!("In the Main Folder {}.", path);
                         self.add_folder(new_entry);
 
                     } else {
@@ -109,14 +112,14 @@ impl Folder {
 
         if let Some(path) = entry.get(0..entry.len()) {
             if let EntryType::Folder = file_type {
-                //println!("Main Folder {} Added withouth follow.", path);
+                eprintln!("Main Folder {} Added withouth follow.", path);
                 self.add_folder(Folder::new(path))
             } else {
-                //println!("File {} added.", path);
+                eprintln!("File {} added.", path);
                 self.add_file(path);
             }
         } else {
-            //println!("No se pudo?");
+            eprintln!("No se pudo?");
         }
 
     }
@@ -256,52 +259,20 @@ impl<'a> Window<'a> {
 fn get_root(output: String) -> Folder {
     let mut root = Folder::new(".");
 
-    let mut start_point: usize = output.find("   Date      Time    Attr         Size   Compressed  Name\n------------------- ----- ------------ ------------  ------------------------\n").expect("The content isn't be found") + "   Date      Time    Attr         Size   Compressed  Name\n------------------- ----- ------------ ------------  ------------------------\n".len();
-    let mut name_indicate: u8 = 0;
-    let mut file_type: &EntryType = &EntryType::File;
+    let start_point: usize = output.find("   Date      Time    Attr         Size   Compressed  Name\n------------------- ----- ------------ ------------  ------------------------\n").expect("The content isn't be found") + "   Date      Time    Attr         Size   Compressed  Name\n------------------- ----- ------------ ------------  ------------------------\n".len();
+    let clean_output = &output[start_point..];
+    let lines: Vec<&str> = clean_output.split("\n").collect();
 
-    let mut get_flag = false;
-    let mut init_point = start_point;
-
-    loop {
-        if let Some(character) = output.get(start_point..start_point+1) {
-            if character == " " || character == "\t" || character == "\n" {
-                if get_flag {
-                    /*if name_indicate == 5 && character == " " {
-                        start_point += 1;
-                        continue;
-                    }*/
-                    if let Some(part) = output.get(init_point..start_point) {
-                        if name_indicate == 5 {
-                            root.add_entry(part, file_type);
-                            name_indicate = 0;
-                        } else if name_indicate == 0 && part == "-------------------" {
-                            break;
-                        } else {
-                            if name_indicate == 2 {
-                                if part == "D...." {
-                                    file_type = &EntryType::Folder
-                                } else {
-                                    file_type = &EntryType::File
-                                }
-                            }
-                            name_indicate += 1;
-                        }
-                    } else {
-                        break;
-                    }
-                    get_flag = false;
-                }
-                start_point += 1;
-                continue;
-            } else if !get_flag {
-                get_flag = true;
-                init_point = start_point;
-            }
-        } else {
+    for line in lines {
+        if &line[20..25].to_string() == "-----" {
             break;
         }
-        start_point += 1;
+        if &line[20..25].to_string() == "D...." {
+            root.add_entry(&line[53..].to_string(), &EntryType::Folder);
+        } else {
+            root.add_entry(&line[53..].to_string(), &EntryType::File);
+        }
+        eprintln!("Name: {}, type: {}", &line[53..], &line[20..25]);
     }
 
     root
@@ -431,7 +402,7 @@ fn main() {
         .expect("Ubo un error al ejecutar el commando!");
     let output = String::from_utf8(res.stdout).expect("No se pudo convertir la salida a texto");
     win.assign_root(get_root(output.clone()));
-    //println!("El resultado es:\n{}", output);
+    eprintln!("El resultado es:\n{}", output);
 
     let path = get_path(output.clone());
     let binding = output.clone();
