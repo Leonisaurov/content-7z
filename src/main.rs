@@ -6,7 +6,7 @@ use crossterm::{
     QueueableCommand,
     event::{self, Event, KeyCode, KeyEvent, MouseEventKind, MouseButton}
 };
-use std::{time::Duration, io::{self, stdout, Stdout, Write, BufWriter}, thread};
+use std::{time::Duration, io::{self, stdout, Stdout, Write, StdoutLock}, thread};
 
 #[derive(Debug)]
 enum Entry {
@@ -24,6 +24,16 @@ enum EntryType {
 struct Folder {
     name: String,
     content: Vec<Entry>,
+}
+
+trait FromStr<T> {
+    fn add_file(&mut self, file_name: T);
+}
+
+impl FromStr<String> for Folder {
+    fn add_file(&mut self, file_name: String) {
+        self.content.push(Entry::File(file_name));
+    } 
 }
 
 impl Folder {
@@ -144,22 +154,22 @@ struct Cursor {
     y: u16
 }
 
-struct Window {
+struct Window<'a> {
     root: Folder,
     width: u16,
     height: u16,
     cursor: Cursor,
     path: String,
-    writer: *mut Stdout
+    writer: *mut StdoutLock<'a>
 }
 
-impl Window {
-    fn new(width: u16, height: u16, stdout: *mut Stdout) -> Self {
+impl<'a> Window<'a> {
+    fn new(width: u16, height: u16, stdout: *mut StdoutLock<'a>) -> Self {
         Self {
             root: Folder::new(""),
             width, 
             height,
-            cursor: Cursor { x: 0, y: 0 },
+            cursor: Cursor { x: 1, y: 4 },
             path: String::new(),
             writer: stdout
         }
@@ -173,9 +183,9 @@ impl Window {
         self.path = path;
     }
 
-    fn get_writer(&self) -> &Stdout {
+    fn get_writer(&self) -> &mut StdoutLock<'a> {
         unsafe {
-            &(*self.writer)
+            &mut (*self.writer)
         }
     }
 
@@ -184,25 +194,25 @@ impl Window {
     } 
 
     fn move_up(&mut self) {
-        if self.cursor.y > 0 {
+        if self.cursor.y > 4 {
             self.cursor.y -= 1;
         }
     }
 
     fn move_down(&mut self) {
-        if self.cursor.y < self.height {
+        if self.cursor.y < self.height - 2 {
             self.cursor.y += 1;
         }
     }
 
     fn move_left(&mut self) {
-        if self.cursor.x > 0 {
+        if self.cursor.x > 1 {
             self.cursor.x -= 1;
         }
     }
 
     fn move_right(&mut self) {
-        if self.cursor.x < self.width {
+        if self.cursor.x < self.width - 2 {
             self.cursor.x += 1;
         }
     }
@@ -285,10 +295,23 @@ fn get_path(output: String) -> String {
     }
 }
 
+/*trait FromDif {
+    fn write_str(&mut self, content: &str);
+    fn write_string(&mut self, content: String);
+}
+
+impl FromDif for Stdout {
+    fn write_str(&mut self, content: &str) {
+        self.write(content.as_bytes()).unwrap();
+    }
+
+    fn write_string(&mut self, content: String) {
+    }
+}*/
+
 fn print_header(win: &Window) {
     let fill_all_block = "─".repeat(usize::from(win.width) - 2);
-    let fill_all_empty = " ".repeat(usize::from(win.width) - 2);
-    let mut stdout = unsafe { &(*win.writer) };
+    let mut stdout = unsafe { &mut (*win.writer) };
     let path = win.get_path();
 
     stdout.queue(MoveTo(0, 0)).unwrap();
@@ -296,15 +319,52 @@ fn print_header(win: &Window) {
 
     stdout.queue(MoveTo(0, 1)).unwrap();
     stdout.write("│".as_bytes()).unwrap();
-    stdout.write(path.as_bytes()).unwrap();
-    stdout.write(fill_all_empty[0..usize::from(win.width - 2) - path.len()].as_bytes()).unwrap();
+    if path.len() > (win.width - 2).into() {
+        stdout.write(&path.as_bytes()[0..path.len() - 3]).unwrap();
+        stdout.write("...".as_bytes()).unwrap();
+    } else {
+        stdout.write(path.as_bytes()).unwrap();
+    }
+
+    stdout.queue(MoveTo(win.width - 1, 1)).unwrap();
     stdout.write("│".as_bytes()).unwrap();
 
     stdout.queue(MoveTo(0, 2)).unwrap();
     stdout.write(("└".to_string() + fill_all_block.as_str() + "┘").as_bytes()).unwrap();
 
+    // stdout.queue(MoveTo(0, win.height - 1)).unwrap();
+    // stdout.write_fmt(format_args!("{}:{}", win.cursor.x, win.cursor.y)).unwrap();
+}
+
+fn print_menu(win: &Window) {
+    let fill_all_block = "─".repeat(usize::from(win.width) - 2);
+    let stdout = unsafe { &mut (*win.writer) };
+
+    stdout.queue(MoveTo(0, 3)).unwrap();
+    stdout.write(("┌".to_string() + fill_all_block.as_str() + "┐").as_bytes()).unwrap();
+
+    for i in 4..win.height {
+        stdout.queue(MoveTo(0, i)).unwrap();
+        stdout.write("│".as_bytes()).unwrap();
+        if win.root.content.len() > (i - 4).into() {
+            let entry = &win.root.content[usize::from(i - 4)];
+            let _ = match entry {
+                Entry::File(file_name) => {
+                    stdout.write("--- ".as_bytes()).unwrap();
+                    stdout.write(file_name.as_bytes()).unwrap()
+                },
+                Entry::Folder(folder) => {
+                    stdout.write("[+] ".as_bytes()).unwrap();
+                    stdout.write(folder.name.as_bytes()).unwrap()
+                },
+            };
+        }
+        stdout.queue(MoveTo(win.width - 1, i)).unwrap();
+        stdout.write("│".as_bytes()).unwrap();
+    }
+
     stdout.queue(MoveTo(0, win.height - 1)).unwrap();
-    stdout.write_fmt(format_args!("{}:{}", win.cursor.x, win.cursor.y)).unwrap();
+    stdout.write(("└".to_string() + fill_all_block.as_str() + "┘").as_bytes()).unwrap();
 }
 
 fn main() {
@@ -314,8 +374,10 @@ fn main() {
         exit(-1);
     }
 
-    let mut stdout = stdout();
+    let mut stdout = stdout().lock();
     stdout.queue(terminal::EnterAlternateScreen).unwrap();
+    stdout.queue(terminal::DisableLineWrap).unwrap();
+    stdout.queue(terminal::EndSynchronizedUpdate).unwrap();
     terminal::enable_raw_mode().expect("Error al abrir la patalla");
     stdout.flush().unwrap();
 
@@ -333,6 +395,8 @@ fn main() {
     let path = get_path(output.clone());
     win.assign_path(path);
     win.assign_root(get_root(output));
+    print_header(&mut win);
+    print_menu(&mut win);
 
     'mainLoop:
     loop {
@@ -351,13 +415,7 @@ fn main() {
                 _ => {}
             }
         }
-
-        stdout.queue(Clear(ClearType::All)).unwrap();
-
-        print_header(&mut win);
-
         stdout.queue(MoveTo(win.cursor.x, win.cursor.y)).unwrap();
-
         stdout.flush().unwrap();
 
         thread::sleep(Duration::from_millis(30));
