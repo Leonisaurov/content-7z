@@ -72,7 +72,7 @@ impl Folder {
     }
 
     fn add_entry(&mut self, entry: &str, file_type: &EntryType) {
-        //println!("Source Entry: {}", entry);
+        //println!("{}", entry);
         for i in 0..entry.len() + 1 {
             if let Some(character) = entry.get(i..i+1) {
                 if character == "/" {
@@ -206,30 +206,38 @@ impl<'a> Window<'a> {
         self.path.clone()
     } 
 
-    fn move_up(&mut self) {
+    fn move_up(&mut self) -> bool {
         if self.cursor.y > 4 {
             self.cursor.y -= 1;
+        } else if self.scroll_y > 9 {
+            self.scroll_y -= 10;
+            return true;
         }
+        false
     }
 
-    fn move_down(&mut self) {
+    fn move_down(&mut self) -> bool {
         if self.cursor.y < self.height - 2 {
             self.cursor.y += 1;
         } else {
-            self.scroll_y += 1;
+            self.scroll_y += 10;
+            return true;
         }
+        false
     }
 
-    fn move_left(&mut self) {
+    fn move_left(&mut self) -> bool {
         if self.cursor.x > 1 {
             self.cursor.x -= 1;
         }
+        false
     }
 
-    fn move_right(&mut self) {
+    fn move_right(&mut self) -> bool{
         if self.cursor.x < self.width - 2 {
             self.cursor.x += 1;
         }
+        false
     }
 
     fn set_cursor(&mut self, x: u16, y: u16) {
@@ -258,7 +266,11 @@ fn get_root(output: String) -> Folder {
             loop {
                 if let Some(character) = output.get(start_point..(start_point + 1)) {
                     //println!("Found in word: {}", character);
-                    if character == " " || character == "\t" || character == "\n" {
+                    if name_indicate == 5 {
+                        if character == "\n" {
+                            break;
+                        }
+                    } else if character == "\n" || character == "\t" || character == " " {
                         //println!("Relleno final");
                         break;
                     }
@@ -367,8 +379,9 @@ fn print_menu(win: &Window) {
         stdout.queue(MoveTo(0, i)).unwrap();
         stdout.queue(terminal::Clear(ClearType::CurrentLine)).unwrap();
         stdout.write("│".as_bytes()).unwrap();
-        if win.get_current().content.len() > (i - 4).into() {
-            let entry = &win.get_current().content[usize::from(i - 4)];
+
+        if win.get_current().content.len() > (i - 4 + win.scroll_y).into() {
+            let entry = &win.get_current().content[usize::from(i - 4 + win.scroll_y)];
             let _ = match entry {
                 Entry::File(file_name) => {
                     stdout.write("--- ".as_bytes()).unwrap();
@@ -380,6 +393,7 @@ fn print_menu(win: &Window) {
                 },
             };
         }
+
         stdout.queue(MoveTo(win.width - 1, i)).unwrap();
         stdout.write("│".as_bytes()).unwrap();
     }
@@ -425,6 +439,7 @@ fn main() {
         .output()
         .expect("Ubo un error al ejecutar el commando!");
     let output = String::from_utf8(res.stdout).expect("No se pudo convertir la salida a texto");
+    win.assign_root(get_root(output.clone()));
     //println!("El resultado es:\n{}", output);
 
     let path = get_path(output.clone());
@@ -444,22 +459,27 @@ fn main() {
                     match ev.code {
                         KeyCode::Esc => break 'mainLoop,
                         KeyCode::Up => {
-                            win.move_up();
+                            if win.move_up() {
+                                print_menu(&mut win);
+                            }
                             mouse_update = true;
                         },
                         KeyCode::Down => {
-                            win.move_down();
-                            mouse_update = true;
-                            if win.cursor.y > win.height - 3 {
-                                print_lines(&mut win, &lines);
+                            if win.move_down() {
+                                print_menu(&mut win);
                             }
+                            mouse_update = true;
                         },
                         KeyCode::Right => {
-                            win.move_right();
+                            if win.move_right() {
+                                print_menu(&mut win);
+                            }
                             mouse_update = true;
                         },
                         KeyCode::Left => {
-                            win.move_left();
+                            if win.move_left() {
+                                print_menu(&mut win);
+                            }
                             mouse_update = true;
                         },
                         KeyCode::Enter => {
