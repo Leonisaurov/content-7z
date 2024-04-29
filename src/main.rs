@@ -139,10 +139,16 @@ impl Folder {
     }
 }
 
+struct Cursor {
+    x: u16,
+    y: u16
+}
+
 struct Window {
     root: Folder,
     width: u16,
     height: u16,
+    cursor: Cursor,
     path: String,
     writer: *mut Stdout
 }
@@ -153,6 +159,7 @@ impl Window {
             root: Folder::new(""),
             width, 
             height,
+            cursor: Cursor { x: 0, y: 0 },
             path: String::new(),
             writer: stdout
         }
@@ -164,6 +171,40 @@ impl Window {
 
     fn assign_path(&mut self, path: String) {
         self.path = path;
+    }
+
+    fn get_writer(&self) -> &Stdout {
+        unsafe {
+            &(*self.writer)
+        }
+    }
+
+    fn get_path(&self) -> String {
+        self.path.clone()
+    } 
+
+    fn move_up(&mut self) {
+        if self.cursor.y > 0 {
+            self.cursor.y -= 1;
+        }
+    }
+
+    fn move_down(&mut self) {
+        if self.cursor.y < self.height {
+            self.cursor.y += 1;
+        }
+    }
+
+    fn move_left(&mut self) {
+        if self.cursor.x > 0 {
+            self.cursor.x -= 1;
+        }
+    }
+
+    fn move_right(&mut self) {
+        if self.cursor.x < self.width {
+            self.cursor.x += 1;
+        }
     }
 }
 
@@ -244,20 +285,26 @@ fn get_path(output: String) -> String {
     }
 }
 
-fn print_header(win: &mut Window) {
+fn print_header(win: &Window) {
     let fill_all_block = "─".repeat(usize::from(win.width) - 2);
-    let fill_all_empty = " ".repeat(usize::from(win.width) - 2).as_str();
-    let mut stdout = unsafe {
-        &(*win.writer)
-    };
+    let fill_all_empty = " ".repeat(usize::from(win.width) - 2);
+    let mut stdout = unsafe { &(*win.writer) };
+    let path = win.get_path();
 
     stdout.queue(MoveTo(0, 0)).unwrap();
     stdout.write(("┌".to_string() + fill_all_block.as_str() + "┐").as_bytes()).unwrap();
 
     stdout.queue(MoveTo(0, 1)).unwrap();
+    stdout.write("│".as_bytes()).unwrap();
+    stdout.write(path.as_bytes()).unwrap();
+    stdout.write(fill_all_empty[0..usize::from(win.width - 2) - path.len()].as_bytes()).unwrap();
+    stdout.write("│".as_bytes()).unwrap();
 
     stdout.queue(MoveTo(0, 2)).unwrap();
     stdout.write(("└".to_string() + fill_all_block.as_str() + "┘").as_bytes()).unwrap();
+
+    stdout.queue(MoveTo(0, win.height - 1)).unwrap();
+    stdout.write_fmt(format_args!("{}:{}", win.cursor.x, win.cursor.y)).unwrap();
 }
 
 fn main() {
@@ -283,7 +330,8 @@ fn main() {
     let output = String::from_utf8(res.stdout).expect("No se pudo convertir la salida a texto");
     //println!("El resultado es:\n{}", output);
 
-    win.assign_path(get_path(output.clone()));
+    let path = get_path(output.clone());
+    win.assign_path(path);
     win.assign_root(get_root(output));
 
     'mainLoop:
@@ -293,6 +341,10 @@ fn main() {
                 Event::Key(ev) => {
                     match ev.code {
                         KeyCode::Esc => break 'mainLoop,
+                        KeyCode::Up => win.move_up(),
+                        KeyCode::Down => win.move_down(),
+                        KeyCode::Right => win.move_right(),
+                        KeyCode::Left => win.move_left(),
                         _ => {}
                     }
                 },
@@ -304,9 +356,11 @@ fn main() {
 
         print_header(&mut win);
 
+        stdout.queue(MoveTo(win.cursor.x, win.cursor.y)).unwrap();
+
         stdout.flush().unwrap();
 
-        thread::sleep(Duration::from_millis(300));
+        thread::sleep(Duration::from_millis(30));
     }
 
     terminal::disable_raw_mode().unwrap();
