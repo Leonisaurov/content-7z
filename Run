@@ -1,4 +1,4 @@
 #!/bin/bash
 set -x
-cargo run $1
+cargo run $@
 set +x

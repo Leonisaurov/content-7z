@@ -1,6 +1,13 @@
 use std::process::{Command, exit};
 use std::env::args;
 
+use crossterm::{
+    self, terminal::{self, Clear, ClearType}, cursor::MoveTo,
+    QueueableCommand,
+    event::{self, Event, KeyCode, KeyEvent, MouseEventKind, MouseButton}
+};
+use std::{time::Duration, io::{self, stdout, Stdout, Write, BufWriter}, thread};
+
 #[derive(Debug)]
 enum Entry {
     File(String),
@@ -132,6 +139,34 @@ impl Folder {
     }
 }
 
+struct Window {
+    root: Folder,
+    width: u16,
+    height: u16,
+    path: String,
+    writer: *mut Stdout
+}
+
+impl Window {
+    fn new(width: u16, height: u16, stdout: *mut Stdout) -> Self {
+        Self {
+            root: Folder::new(""),
+            width, 
+            height,
+            path: String::new(),
+            writer: stdout
+        }
+    }
+
+    fn assign_root(&mut self, folder: Folder) {
+        self.root = folder;
+    }
+
+    fn assign_path(&mut self, path: String) {
+        self.path = path;
+    }
+}
+
 fn get_root(output: String) -> Folder {
     let mut root = Folder::new(".");
 
@@ -209,12 +244,37 @@ fn get_path(output: String) -> String {
     }
 }
 
+fn print_header(win: &mut Window) {
+    let fill_all_block = "─".repeat(usize::from(win.width) - 2);
+    let fill_all_empty = " ".repeat(usize::from(win.width) - 2).as_str();
+    let mut stdout = unsafe {
+        &(*win.writer)
+    };
+
+    stdout.queue(MoveTo(0, 0)).unwrap();
+    stdout.write(("┌".to_string() + fill_all_block.as_str() + "┐").as_bytes()).unwrap();
+
+    stdout.queue(MoveTo(0, 1)).unwrap();
+
+    stdout.queue(MoveTo(0, 2)).unwrap();
+    stdout.write(("└".to_string() + fill_all_block.as_str() + "┘").as_bytes()).unwrap();
+}
+
 fn main() {
     let args: Vec<String> = args().collect();
     if args.len() != 2 {
         eprintln!("Usage:\n\t{} {{7zip file}}", &args[0]);
         exit(-1);
     }
+
+    let mut stdout = stdout();
+    stdout.queue(terminal::EnterAlternateScreen).unwrap();
+    terminal::enable_raw_mode().expect("Error al abrir la patalla");
+    stdout.flush().unwrap();
+
+    let (width, height) = terminal::size().unwrap();
+
+    let mut win = Window::new(width, height, &mut stdout);
 
     let res = Command::new("7z")
         .args(vec!["l", &args[1]])
@@ -223,9 +283,32 @@ fn main() {
     let output = String::from_utf8(res.stdout).expect("No se pudo convertir la salida a texto");
     //println!("El resultado es:\n{}", output);
 
-    let path = get_path(output.clone());
-    println!("Path: {}", path);
+    win.assign_path(get_path(output.clone()));
+    win.assign_root(get_root(output));
 
-    let root = get_root(output);
-    root.print();
+    'mainLoop:
+    loop {
+        while event::poll(Duration::ZERO).unwrap() {
+            match event::read().unwrap() {
+                Event::Key(ev) => {
+                    match ev.code {
+                        KeyCode::Esc => break 'mainLoop,
+                        _ => {}
+                    }
+                },
+                _ => {}
+            }
+        }
+
+        stdout.queue(Clear(ClearType::All)).unwrap();
+
+        print_header(&mut win);
+
+        stdout.flush().unwrap();
+
+        thread::sleep(Duration::from_millis(300));
+    }
+
+    terminal::disable_raw_mode().unwrap();
+    stdout.queue(terminal::LeaveAlternateScreen).unwrap();
 }
