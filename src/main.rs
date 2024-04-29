@@ -72,7 +72,7 @@ impl Folder {
     }
 
     fn add_entry(&mut self, entry: &str, file_type: &EntryType) {
-        eprintln!("{}", entry);
+        // eprintln!("{}", entry);
         for i in 0..entry.len() {
             if let Some(character) = entry.get(i..i+1) {
                 if character == "/" {
@@ -83,23 +83,23 @@ impl Folder {
                                     folder.add_entry(sub_path, file_type);
                                 } else {
                                     let mut new_entry = Folder::new(path);
-                                    eprintln!("No folder found: {} / {}", path, sub_path);
+                                    // eprintln!("No folder found: {} / {}", path, sub_path);
                                     new_entry.add_entry(sub_path, file_type);
                                     self.add_folder(new_entry);
                                 }
                             } else {
                                 eprintln!("The subdir cannot be get");
                             }
-                            eprintln!("In the Main Folder {}.", path);
+                            // eprintln!("In the Main Folder {}.", path);
                             return;
                         }
                         let mut new_entry = Folder::new(path);
-                        eprintln!("Main Folder {} Added.", path);
+                        // eprintln!("Main Folder {} Added.", path);
                         if let Some(sub_path) = entry.get(i+1..entry.len()) {
                             new_entry.add_entry(sub_path, file_type);
-                            eprintln!("Se pudo?");
+                            //eprintln!("Se pudo?");
                         }
-                        eprintln!("In the Main Folder {}.", path);
+                        // eprintln!("In the Main Folder {}.", path);
                         self.add_folder(new_entry);
 
                     } else {
@@ -112,10 +112,10 @@ impl Folder {
 
         if let Some(path) = entry.get(0..entry.len()) {
             if let EntryType::Folder = file_type {
-                eprintln!("Main Folder {} Added withouth follow.", path);
+                // eprintln!("Main Folder {} Added withouth follow.", path);
                 self.add_folder(Folder::new(path))
             } else {
-                eprintln!("File {} added.", path);
+                // eprintln!("File {} added.", path);
                 self.add_file(path);
             }
         } else {
@@ -200,6 +200,20 @@ impl<'a> Window<'a> {
         }
     }
 
+    fn plain_current(&self) -> String {
+        let mut plain = String::from("");
+        let mut s_flag = true;
+        for current in &self.current {
+            if s_flag {
+                s_flag = false;
+                continue;
+            }
+            plain += "/";
+            plain += current.name.as_str();
+        }
+        plain
+    }
+
     fn assign_path(&mut self, path: String) {
         self.path = path;
     }
@@ -209,8 +223,6 @@ impl<'a> Window<'a> {
             &mut (*self.writer)
         }
     }
-
-
 
     fn get_path(&self) -> String {
         self.path.clone()
@@ -272,7 +284,7 @@ fn get_root(output: String) -> Folder {
         } else {
             root.add_entry(&line[53..].to_string(), &EntryType::File);
         }
-        eprintln!("Name: {}, type: {}", &line[53..], &line[20..25]);
+        //eprintln!("Name: {}, type: {}", &line[53..], &line[20..25]);
     }
 
     root
@@ -306,14 +318,15 @@ impl FromDif for Stdout {
 fn print_header(win: &Window) {
     let fill_all_block = "─".repeat(usize::from(win.width) - 2);
     let stdout = unsafe { &mut (*win.writer) };
-    let path = win.get_path();
+    let path = win.get_path() + win.plain_current().as_str();
 
     stdout.queue(MoveTo(0, 0)).unwrap();
     stdout.write(("┌".to_string() + fill_all_block.as_str() + "┐").as_bytes()).unwrap();
 
     stdout.queue(MoveTo(0, 1)).unwrap();
+    stdout.queue(Clear(ClearType::CurrentLine)).unwrap();
     stdout.write("│".as_bytes()).unwrap();
-    if path.len() > (win.width - 2).into() {
+    if path.len() > (win.width - 3).into() {
         stdout.write(&path.as_bytes()[0..path.len() - 3]).unwrap();
         stdout.write("...".as_bytes()).unwrap();
     } else {
@@ -402,7 +415,7 @@ fn main() {
         .expect("Ubo un error al ejecutar el commando!");
     let output = String::from_utf8(res.stdout).expect("No se pudo convertir la salida a texto");
     win.assign_root(get_root(output.clone()));
-    eprintln!("El resultado es:\n{}", output);
+    //eprintln!("El resultado es:\n{}", output);
 
     let path = get_path(output.clone());
     let binding = output.clone();
@@ -450,12 +463,14 @@ fn main() {
                                     win.set_current(dir.clone());
                                     mouse_update = true;
                                     print_menu(&mut win);
+                                    print_header(&mut win);
                                 }
                             }
                         },
                         KeyCode::Backspace => {
                             win.back_current();
                             print_menu(&mut win);
+                            print_header(&mut win);
                         },
                         //KeyCode::Tab => print_lines(&mut win, &lines),
                         _ => {}
