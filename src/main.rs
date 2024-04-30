@@ -6,267 +6,11 @@ use crossterm::{
     QueueableCommand,
     event::{self, Event, KeyCode, KeyEvent, MouseEventKind, MouseButton}
 };
-use std::{time::Duration, io::{self, stdout, Stdout, Write, StdoutLock}, thread};
-
-#[derive(Clone, Debug)]
-enum Entry {
-    File(String),
-    Folder(Folder),
-}
-
-#[derive(Clone, Debug)]
-enum EntryType {
-    File,
-    Folder
-}
-
-#[derive(Clone, Debug)]
-struct Folder {
-    name: String,
-    content: Vec<Entry>,
-}
-
-impl Folder {
-    fn new(name: &str) -> Self {
-        Self {
-            name: String::from(name),
-            content: Vec::new()
-        }
-    }
-
-    fn add_file(&mut self, file_name: &str) {
-        self.content.push(Entry::File(file_name.to_string()));
-    }
-
-    fn add_folder(&mut self, folder: Folder) {
-        self.content.push(Entry::Folder(folder));
-    }
-
-    fn get_folder(&mut self, folder_name: &str) -> Option<&mut Folder> {
-        for entry in &mut self.content {
-            if let Entry::Folder(folder) = entry {
-                if folder.name == folder_name {
-                    return Some(folder)
-                }
-            }
-        }
-        None
-    }
-
-    fn contain_entry(&mut self, entry_name: &str) -> bool {
-        for entry in &self.content {
-            match entry {
-                Entry::File(file_name) => {
-                    if file_name == entry_name {
-                        return true
-                    }
-                },
-                Entry::Folder(folder) => {
-                    if folder.name == entry_name {
-                        return true
-                    }
-                },
-            }
-        }
-        false
-    }
-
-    fn add_entry(&mut self, entry: &str, file_type: &EntryType) {
-        // eprintln!("{}", entry);
-        for i in 0..entry.len() {
-            if let Some(character) = entry.get(i..i+1) {
-                if character == "/" {
-                    if let Some(path) = entry.get(0..i) {
-                        if self.contain_entry(path) {
-                            if let Some(sub_path) = entry.get(i+1..entry.len()) {
-                                if let Some(folder) = self.get_folder(path) {
-                                    folder.add_entry(sub_path, file_type);
-                                } else {
-                                    let mut new_entry = Folder::new(path);
-                                    // eprintln!("No folder found: {} / {}", path, sub_path);
-                                    new_entry.add_entry(sub_path, file_type);
-                                    self.add_folder(new_entry);
-                                }
-                            } else {
-                                eprintln!("The subdir cannot be get");
-                            }
-                            // eprintln!("In the Main Folder {}.", path);
-                            return;
-                        }
-                        let mut new_entry = Folder::new(path);
-                        // eprintln!("Main Folder {} Added.", path);
-                        if let Some(sub_path) = entry.get(i+1..entry.len()) {
-                            new_entry.add_entry(sub_path, file_type);
-                            //eprintln!("Se pudo?");
-                        }
-                        // eprintln!("In the Main Folder {}.", path);
-                        self.add_folder(new_entry);
-
-                    } else {
-                        eprintln!("The subdir cannot be get");
-                    }
-                    return;
-                }
-            }
-        }
-
-        if let Some(path) = entry.get(0..entry.len()) {
-            if let EntryType::Folder = file_type {
-                // eprintln!("Main Folder {} Added withouth follow.", path);
-                self.add_folder(Folder::new(path))
-            } else {
-                // eprintln!("File {} added.", path);
-                self.add_file(path);
-            }
-        } else {
-            eprintln!("No se pudo?");
-        }
-
-    }
-
-    
-    fn strace(&self, indent: usize) {
-        let indent_char = " ".repeat(indent);
-        println!("{}Folder: {}", " ".repeat(indent - 1) + "└┬", self.name);
-        let mut i = 0;
-        for entry in &self.content {
-            match entry {
-                Entry::File(file_name) => {
-                    if i + 1 < self.content.len() {
-                        println!("{} ├file: {}", indent_char, file_name);
-                    } else {
-                        println!("{} └file: {}", indent_char, file_name);
-                    }
-                },
-                Entry::Folder(folder) => folder.strace(indent + 1),
-            }
-            i += 1;
-        }
-    }
-
-    fn print(&self) {
-        self.strace(1);
-    }
-}
-
-struct Cursor {
-    x: u16,
-    y: u16
-}
-
-struct Window<'a> {
-    root: Folder,
-    current: Vec<Folder>,
-    width: u16,
-    height: u16,
-    scroll_x: u16,
-    scroll_y: u16,
-    cursor: Cursor,
-    path: String,
-    writer: *mut StdoutLock<'a>
-}
-
-impl<'a> Window<'a> {
-    fn new(width: u16, height: u16, stdout: *mut StdoutLock<'a>) -> Self {
-        Self {
-            root: Folder::new(""),
-            current: vec![Folder::new("")],
-            width, 
-            height,
-            scroll_x: 0,
-            scroll_y: 0,
-            cursor: Cursor { x: 1, y: 4 },
-            path: String::new(),
-            writer: stdout
-        }
-    }
-
-    fn assign_root(&mut self, folder: Folder) {
-        self.root = folder.clone();
-        self.current = vec![folder];
-    }
-
-    fn get_current(&self) -> &Folder {
-        &self.current[self.current.len() - 1]
-    }
-    
-    fn set_current(&mut self, folder: Folder) {
-        self.current.push(folder);
-    }
-
-    fn back_current(&mut self) {
-        if self.current.len() > 1 {
-            self.current.pop().unwrap();
-        }
-    }
-
-    fn plain_current(&self) -> String {
-        let mut plain = String::from("");
-        let mut s_flag = true;
-        for current in &self.current {
-            if s_flag {
-                s_flag = false;
-                continue;
-            }
-            plain += "/";
-            plain += current.name.as_str();
-        }
-        plain
-    }
-
-    fn assign_path(&mut self, path: String) {
-        self.path = path;
-    }
-
-    fn get_writer(&self) -> &mut StdoutLock<'a> {
-        unsafe {
-            &mut (*self.writer)
-        }
-    }
-
-    fn get_path(&self) -> String {
-        self.path.clone()
-    } 
-
-    fn move_up(&mut self) -> bool {
-        if self.cursor.y > 4 {
-            self.cursor.y -= 1;
-        } else if self.scroll_y > 9 {
-            self.scroll_y -= 10;
-            return true;
-        }
-        false
-    }
-
-    fn move_down(&mut self) -> bool {
-        if self.cursor.y < self.height - 2 {
-            self.cursor.y += 1;
-        } else {
-            self.scroll_y += 10;
-            return true;
-        }
-        false
-    }
-
-    fn move_left(&mut self) -> bool {
-        if self.cursor.x > 1 {
-            self.cursor.x -= 1;
-        }
-        false
-    }
-
-    fn move_right(&mut self) -> bool{
-        if self.cursor.x < self.width - 2 {
-            self.cursor.x += 1;
-        }
-        false
-    }
-
-    fn set_cursor(&mut self, x: u16, y: u16) {
-        self.cursor.x = x;
-        self.cursor.y = y;
-    }
-}
+use std::{time::Duration, io::{stdout, Stdout, Write, StdoutLock}, thread};
+use content_7z::{
+    files::{folder::Folder, entry::Entry, entry::EntryType},
+    window::window::Window
+};
 
 fn get_root(output: String) -> Folder {
     let mut root = Folder::new(".");
@@ -377,6 +121,42 @@ fn print_menu(win: &Window) {
     stdout.write(("└".to_string() + fill_all_block.as_str() + "┘").as_bytes()).unwrap();
 }
 
+fn show_dialog(win: &mut Window, label: &str) {
+    let stdout = unsafe { &mut (*win.writer) };
+    let x: u16 = win.width / 2 - label.len() as u16 / 2;
+    let y: u16 = win.height / 2 - 1;
+
+    let fill_all_block = "─".repeat(label.len());
+
+    stdout.queue(MoveTo(x, y)).unwrap();
+    stdout.write("┌".as_bytes()).unwrap();
+    stdout.write(fill_all_block.as_bytes()).unwrap();
+    stdout.write("┐".as_bytes()).unwrap();
+
+    stdout.queue(MoveTo(x, y + 1)).unwrap();
+    stdout.write("│".as_bytes()).unwrap();
+    stdout.write(label.as_bytes()).unwrap();
+    stdout.write("│".as_bytes()).unwrap();
+
+    stdout.queue(MoveTo(x, y + 2)).unwrap();
+    stdout.write("└".as_bytes()).unwrap();
+    stdout.write(fill_all_block.as_bytes()).unwrap();
+    stdout.write("┘".as_bytes()).unwrap();
+
+    win.on_dialog = true;
+
+    win.cursor.x = win.width / 2;
+    win.cursor.y = win.height / 2;
+
+    win.cursor.need_update = true;
+}
+
+fn close_dialog(win: &mut Window) {
+    win.on_dialog = false;
+    print_header(win);
+    print_menu(win);
+}
+
 fn print_lines(win: &mut Window, lines: &Vec<&str>) {
     let stdout = unsafe { &mut (*win.writer) };
 
@@ -427,11 +207,11 @@ fn main() {
     let path = get_path(output.clone());
     let binding = output.clone();
     let lines: Vec<&str> = binding.split("\n").collect();
-    let mut mouse_update = false;
     win.assign_path(path);
     win.assign_root(get_root(output.clone()));
     print_header(&mut win);
     print_menu(&mut win);
+    stdout.queue(MoveTo(1, 4)).unwrap();
 
     'mainLoop:
     loop {
@@ -440,44 +220,20 @@ fn main() {
                 Event::Key(ev) => {
                     match ev.code {
                         KeyCode::Esc => break 'mainLoop,
-                        KeyCode::Up => {
-                            if win.move_up() {
-                                print_menu(&mut win);
-                            }
-                            mouse_update = true;
-                        },
-                        KeyCode::Down => {
-                            if win.move_down() {
-                                print_menu(&mut win);
-                            }
-                            mouse_update = true;
-                        },
-                        KeyCode::Right => {
-                            if win.move_right() {
-                                print_menu(&mut win);
-                            }
-                            mouse_update = true;
-                        },
-                        KeyCode::Left => {
-                            if win.move_left() {
-                                print_menu(&mut win);
-                            }
-                            mouse_update = true;
-                        },
+                        KeyCode::Up => win.move_up(),
+                        KeyCode::Down => win.move_down(),
+                        KeyCode::Right => win.move_right(),
+                        KeyCode::Left => win.move_left(),
+
+                        KeyCode::Char('s') => show_dialog(&mut win, "Hola, como estas?"),
+
+                        KeyCode::Backspace => win.back_current(),
                         KeyCode::Enter => {
                             if usize::from(win.cursor.y - 4 + win.scroll_y) < win.get_current().content.len() {
                                 if let Entry::Folder(dir) = &win.get_current().content[usize::from(win.cursor.y - 4 + win.scroll_y)] {
                                     win.set_current(dir.clone());
-                                    mouse_update = true;
-                                    print_menu(&mut win);
-                                    print_header(&mut win);
                                 }
                             }
-                        },
-                        KeyCode::Backspace => {
-                            win.back_current();
-                            print_menu(&mut win);
-                            print_header(&mut win);
                         },
                         //KeyCode::Tab => print_lines(&mut win, &lines),
                         _ => {}
@@ -487,9 +243,15 @@ fn main() {
             }
         }
 
-        if mouse_update {
+        if win.scroll_change {
+            win.scroll_change = false;
+            print_menu(&mut win);
+        }
+
+        if win.cursor.need_update {
+            win.cursor.need_update = false;
             let new_y: u16 = (win.get_current().content.len() + 3).try_into().unwrap();
-            if win.cursor.y > new_y && new_y != 3 {
+            if !win.on_dialog && win.cursor.y > new_y && new_y != 3 {
                 win.set_cursor(win.cursor.x, new_y);
             }
             stdout.queue(MoveTo(win.cursor.x, win.cursor.y)).unwrap();

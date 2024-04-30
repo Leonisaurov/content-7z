@@ -1,0 +1,131 @@
+use crate::{
+    files::folder::Folder,
+    window::cursor::Cursor
+};
+use std::io::StdoutLock;
+
+pub struct Window<'a> {
+    pub root: Folder,
+    pub current: Vec<Folder>,
+    pub width: u16,
+    pub height: u16,
+    pub scroll_x: u16,
+    pub scroll_y: u16,
+    pub scroll_change: bool,
+    pub on_dialog: bool,
+    pub cursor: Cursor,
+    pub path: String,
+    pub writer: *mut StdoutLock<'a>
+}
+
+impl<'a> Window<'a> {
+    pub fn new(width: u16, height: u16, stdout: *mut StdoutLock<'a>) -> Self {
+        Self {
+            root: Folder::new(""),
+            current: vec![Folder::new("")],
+            width, 
+            height,
+            scroll_x: 0,
+            scroll_y: 0,
+            scroll_change: false,
+            on_dialog: false,
+            cursor: Cursor { x: 1, y: 4, need_update: false },
+            path: String::new(),
+            writer: stdout
+        }
+    }
+
+    pub fn assign_root(&mut self, folder: Folder) {
+        self.root = folder.clone();
+        self.current = vec![folder];
+    }
+
+    pub fn get_current(&self) -> &Folder {
+        &self.current[self.current.len() - 1]
+    }
+    
+    pub fn set_current(&mut self, folder: Folder) {
+        self.current.push(folder);
+        self.cursor.need_update = true;
+
+        self.scroll_change = true;
+        self.scroll_y = 0;
+        self.scroll_x = 0;
+    }
+
+    pub fn back_current(&mut self) {
+        if self.current.len() > 1 {
+            self.current.pop().unwrap();
+
+            self.scroll_change = true;
+        }
+    }
+
+    pub fn plain_current(&self) -> String {
+        let mut plain = String::from("");
+        let mut s_flag = true;
+        for current in &self.current {
+            if s_flag {
+                s_flag = false;
+                continue;
+            }
+            plain += "/";
+            plain += current.name.as_str();
+        }
+        plain
+    }
+
+    pub fn assign_path(&mut self, path: String) {
+        self.path = path;
+    }
+
+    pub fn get_writer(&self) -> &mut StdoutLock<'a> {
+        unsafe {
+            &mut (*self.writer)
+        }
+    }
+
+    pub fn get_path(&self) -> String {
+        self.path.clone()
+    } 
+
+    pub fn move_up(&mut self) {
+        if self.cursor.y > 4 {
+            self.cursor.y -= 1;
+            self.cursor.need_update = true;
+        } else if self.scroll_y > 0 {
+            self.scroll_y -= 1;
+            self.scroll_change = true;
+        }
+    }
+
+    pub fn move_down(&mut self) {
+        if self.cursor.y < self.height - 2 {
+            self.cursor.y += 1;
+            self.cursor.need_update = true;
+        } else {
+            self.scroll_y += 1;
+            self.scroll_change = true;
+        }
+    }
+
+    pub fn move_left(&mut self) {
+        if self.cursor.x > 1 {
+            self.cursor.x -= 1;
+            self.cursor.need_update = true;
+        }
+    }
+
+    pub fn move_right(&mut self) {
+        if self.cursor.x < self.width - 2 {
+            self.cursor.x += 1;
+            self.cursor.need_update = true;
+        }
+    }
+
+    pub fn set_cursor(&mut self, x: u16, y: u16) {
+        self.cursor.x = x;
+        self.cursor.y = y;
+    }
+}
+
