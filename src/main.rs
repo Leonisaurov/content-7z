@@ -23,20 +23,6 @@ fn get_path(output: String) -> String {
     }
 }
 
-/*trait FromDif {
-    fn write_str(&mut self, content: &str);
-    fn write_string(&mut self, content: String);
-}
-
-impl FromDif for Stdout {
-    fn write_str(&mut self, content: &str) {
-        self.write(content.as_bytes()).unwrap();
-    }
-
-    fn write_string(&mut self, content: String) {
-    }
-}*/
-
 fn print_header(win: &Window) {
     let fill_all_block = "─".repeat(usize::from(win.width) - 2);
     let stdout = unsafe { &mut (*win.writer) };
@@ -212,7 +198,7 @@ fn main() {
                                 match &win.get_current().content[usize::from(win.cursor.y - 4 + win.scroll_y)] {
                                     Entry::Folder(dir) => win.set_current(dir.clone()),
                                     Entry::File(file_name) => {
-                                        let path = win.plain_current() + file_name;
+                                        let path = win.plain_current() + "/" + file_name;
                                         show_dialog(&mut win, path.as_str());
                                     },
                                 }
