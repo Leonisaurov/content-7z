@@ -14,6 +14,28 @@ impl Folder {
         }
     }
 
+    pub fn get_root(output: String) -> Self {
+        let mut root = Self::new(".");
+
+        let start_point: usize = output.find("   Date      Time    Attr         Size   Compressed  Name\n------------------- ----- ------------ ------------  ------------------------\n").expect("The content isn't be found") + "   Date      Time    Attr         Size   Compressed  Name\n------------------- ----- ------------ ------------  ------------------------\n".len();
+        let clean_output = &output[start_point..];
+        let lines: Vec<&str> = clean_output.split("\n").collect();
+
+        for line in lines {
+            if &line[20..25].to_string() == "-----" {
+                break;
+            }
+            if &line[20..25].to_string() == "D...." {
+                root.add_entry(&line[53..].to_string(), &EntryType::Folder);
+            } else {
+                root.add_entry(&line[53..].to_string(), &EntryType::File);
+            }
+            //eprintln!("Name: {}, type: {}", &line[53..], &line[20..25]);
+        }
+
+        root
+    }
+
     pub fn add_file(&mut self, file_name: &str) {
         self.content.push(Entry::File(file_name.to_string()));
     }

@@ -4,35 +4,13 @@ use std::env::args;
 use crossterm::{
     self, terminal::{self, Clear, ClearType}, cursor::MoveTo,
     QueueableCommand,
-    event::{self, Event, KeyCode, KeyEvent, MouseEventKind, MouseButton}
+    event::{self, Event, KeyCode}
 };
-use std::{time::Duration, io::{stdout, Stdout, Write, StdoutLock}, thread};
+use std::{time::Duration, io::{stdout, Write}, thread};
 use content_7z::{
-    files::{folder::Folder, entry::Entry, entry::EntryType},
+    files::{folder::Folder, entry::Entry},
     window::window::Window
 };
-
-fn get_root(output: String) -> Folder {
-    let mut root = Folder::new(".");
-
-    let start_point: usize = output.find("   Date      Time    Attr         Size   Compressed  Name\n------------------- ----- ------------ ------------  ------------------------\n").expect("The content isn't be found") + "   Date      Time    Attr         Size   Compressed  Name\n------------------- ----- ------------ ------------  ------------------------\n".len();
-    let clean_output = &output[start_point..];
-    let lines: Vec<&str> = clean_output.split("\n").collect();
-
-    for line in lines {
-        if &line[20..25].to_string() == "-----" {
-            break;
-        }
-        if &line[20..25].to_string() == "D...." {
-            root.add_entry(&line[53..].to_string(), &EntryType::Folder);
-        } else {
-            root.add_entry(&line[53..].to_string(), &EntryType::File);
-        }
-        //eprintln!("Name: {}, type: {}", &line[53..], &line[20..25]);
-    }
-
-    root
-}
 
 fn get_path(output: String) -> String {
     let path_start = output.find("Path = ").expect("No path") + 7;
@@ -151,12 +129,14 @@ fn show_dialog(win: &mut Window, label: &str) {
     win.cursor.need_update = true;
 }
 
+#[allow(dead_code)]
 fn close_dialog(win: &mut Window) {
     win.on_dialog = false;
     print_header(win);
     print_menu(win);
 }
 
+/*
 fn print_lines(win: &mut Window, lines: &Vec<&str>) {
     let stdout = unsafe { &mut (*win.writer) };
 
@@ -169,7 +149,7 @@ fn print_lines(win: &mut Window, lines: &Vec<&str>) {
         }
         println!("\r\x1b[K{}", lines[i]);
     }
-}
+}*/
 
 fn main() {
     let args: Vec<String> = args().collect();
@@ -201,14 +181,13 @@ fn main() {
     }
 
     let output = String::from_utf8(res.stdout).expect("No se pudo convertir la salida a texto");
-    win.assign_root(get_root(output.clone()));
+    win.assign_root(Folder::get_root(output.clone()));
     //eprintln!("El resultado es:\n{}", output);
 
     let path = get_path(output.clone());
-    let binding = output.clone();
-    let lines: Vec<&str> = binding.split("\n").collect();
+    //let binding = output.clone();
+    //let lines: Vec<&str> = binding.split("\n").collect();
     win.assign_path(path);
-    win.assign_root(get_root(output.clone()));
     print_header(&mut win);
     print_menu(&mut win);
     stdout.queue(MoveTo(1, 4)).unwrap();
@@ -230,8 +209,12 @@ fn main() {
                         KeyCode::Backspace => win.back_current(),
                         KeyCode::Enter => {
                             if usize::from(win.cursor.y - 4 + win.scroll_y) < win.get_current().content.len() {
-                                if let Entry::Folder(dir) = &win.get_current().content[usize::from(win.cursor.y - 4 + win.scroll_y)] {
-                                    win.set_current(dir.clone());
+                                match &win.get_current().content[usize::from(win.cursor.y - 4 + win.scroll_y)] {
+                                    Entry::Folder(dir) => win.set_current(dir.clone()),
+                                    Entry::File(file_name) => {
+                                        let path = win.plain_current() + file_name;
+                                        show_dialog(&mut win, path.as_str());
+                                    },
                                 }
                             }
                         },
