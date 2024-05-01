@@ -1,8 +1,10 @@
 use crate::{
     files::folder::Folder,
-    window::cursor::Cursor
+    window::cursor::Cursor,
+    zip_manager::manager
 };
-use std::io::StdoutLock;
+use std::io::{StdoutLock, Write};
+use crossterm::{terminal, QueueableCommand};
 
 pub struct Window<'a> {
     pub root: Folder,
@@ -18,11 +20,28 @@ pub struct Window<'a> {
     pub writer: *mut StdoutLock<'a>
 }
 
+impl<'a> Drop for Window<'a> {
+    fn drop(&mut self) {
+        terminal::disable_raw_mode().unwrap();
+        unsafe {
+            (&mut (*self.writer)).queue(terminal::LeaveAlternateScreen).unwrap();
+        }
+    }
+}
+
 impl<'a> Window<'a> {
-    pub fn new(width: u16, height: u16, stdout: *mut StdoutLock<'a>) -> Self {
+    pub fn new(stdout: *mut StdoutLock<'a>) -> Self {
+        let out = unsafe { &mut (*stdout) };
+        out.queue(terminal::EnterAlternateScreen).unwrap();
+        out.queue(terminal::EndSynchronizedUpdate).unwrap();
+        terminal::enable_raw_mode().expect("Error al abrir la patalla");
+        out.flush().unwrap();
+
+        let (width, height) = terminal::size().unwrap();
+
         Self {
             root: Folder::new(""),
-            current: vec![Folder::new("")],
+            current: vec![],
             width, 
             height,
             scroll_x: 0,
@@ -40,7 +59,15 @@ impl<'a> Window<'a> {
         self.current = vec![folder];
     }
 
+    pub fn assing_manager(&mut self, manager: manager::ZipManager) {
+        self.assign_path(manager.get_path());
+        self.assign_root(manager.get_root());
+    } 
+
     pub fn get_current(&self) -> &Folder {
+        if self.current.len() == 0 {
+
+        }
         &self.current[self.current.len() - 1]
     }
     
@@ -126,6 +153,7 @@ impl<'a> Window<'a> {
     pub fn set_cursor(&mut self, x: u16, y: u16) {
         self.cursor.x = x;
         self.cursor.y = y;
+        self.cursor.need_update = true;
     }
 }
 

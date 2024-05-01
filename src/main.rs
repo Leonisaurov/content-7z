@@ -1,27 +1,20 @@
-use std::process::{Command, exit};
-use std::env::args;
-
 use crossterm::{
     self, terminal::{self, Clear, ClearType}, cursor::MoveTo,
     QueueableCommand,
     event::{self, Event, KeyCode}
 };
-use std::{time::Duration, io::{stdout, Write}, thread};
-use content_7z::{
-    files::{folder::Folder, entry::Entry},
-    window::window::Window
+
+use std::{
+    time::Duration, io::{stdout, Write}, thread,
+    process::exit, env::args
 };
 
-fn get_path(output: String) -> String {
-    let path_start = output.find("Path = ").expect("No path") + 7;
-    let path_end = output.find("\nType = ").expect("No path end");
+use content_7z::{
+    files::entry::Entry,
+    window::window::Window,
+};
 
-    if let Some(path) = output.get(path_start..path_end) {
-        String::from(path)
-    } else {
-        String::from("Unreacheable")
-    }
-}
+use content_7z::zip_manager::manager::ZipManager;
 
 fn print_header(win: &Window) {
     let fill_all_block = "─".repeat(usize::from(win.width) - 2);
@@ -46,9 +39,6 @@ fn print_header(win: &Window) {
 
     stdout.queue(MoveTo(0, 2)).unwrap();
     stdout.write(("└".to_string() + fill_all_block.as_str() + "┘").as_bytes()).unwrap();
-
-    // stdout.queue(MoveTo(0, win.height - 1)).unwrap();
-    // stdout.write_fmt(format_args!("{}:{}", win.cursor.x, win.cursor.y)).unwrap();
 }
 
 fn print_menu(win: &Window) {
@@ -122,21 +112,6 @@ fn close_dialog(win: &mut Window) {
     print_menu(win);
 }
 
-/*
-fn print_lines(win: &mut Window, lines: &Vec<&str>) {
-    let stdout = unsafe { &mut (*win.writer) };
-
-    MoveTo(0, 0);
-    stdout.flush().unwrap();
-
-    for i in usize::from(win.scroll_y)..usize::from(win.scroll_y + win.height) {
-        if i >= lines.len() {
-            break;
-        }
-        println!("\r\x1b[K{}", lines[i]);
-    }
-}*/
-
 fn main() {
     let args: Vec<String> = args().collect();
     if args.len() != 2 {
@@ -145,35 +120,16 @@ fn main() {
     }
 
     let mut stdout = stdout().lock();
-    stdout.queue(terminal::EnterAlternateScreen).unwrap();
-    //stdout.queue(terminal::DisableLineWrap).unwrap();
-    stdout.queue(terminal::EndSynchronizedUpdate).unwrap();
-    terminal::enable_raw_mode().expect("Error al abrir la patalla");
-    stdout.flush().unwrap();
 
-    let (width, height) = terminal::size().unwrap();
-
-    let mut win = Window::new(width, height, &mut stdout);
-
-    let res = Command::new("7z")
-        .args(vec!["l", &args[1]])
-        .output().expect("Error al obtener los datos del archivo!");
-    if String::from_utf8(res.stderr.clone()).unwrap() != "" {
-        terminal::disable_raw_mode().unwrap();
-        stdout.queue(terminal::LeaveAlternateScreen).unwrap();
-        stdout.flush().unwrap();
-        eprintln!("Process Error: {}", String::from_utf8(res.stderr).unwrap());
+    let mut win = Window::new(&mut stdout);
+    let manager = ZipManager::process(&args[1]);
+    if manager.err != "" {
+        eprintln!("Process Error: {}", manager.err);
         exit(-1);
     }
 
-    let output = String::from_utf8(res.stdout).expect("No se pudo convertir la salida a texto");
-    win.assign_root(Folder::get_root(output.clone()));
-    //eprintln!("El resultado es:\n{}", output);
+    win.assing_manager(manager);
 
-    let path = get_path(output.clone());
-    //let binding = output.clone();
-    //let lines: Vec<&str> = binding.split("\n").collect();
-    win.assign_path(path);
     print_header(&mut win);
     print_menu(&mut win);
     stdout.queue(MoveTo(1, 4)).unwrap();
@@ -204,7 +160,6 @@ fn main() {
                                 }
                             }
                         },
-                        //KeyCode::Tab => print_lines(&mut win, &lines),
                         _ => {}
                     }
                 },
@@ -215,6 +170,7 @@ fn main() {
         if win.scroll_change {
             win.scroll_change = false;
             print_menu(&mut win);
+            stdout.queue(MoveTo(win.cursor.x, win.cursor.y)).unwrap();
         }
 
         if win.cursor.need_update {
@@ -230,7 +186,4 @@ fn main() {
 
         thread::sleep(Duration::from_millis(30));
     }
-
-    terminal::disable_raw_mode().unwrap();
-    stdout.queue(terminal::LeaveAlternateScreen).unwrap();
 }
