@@ -6,6 +6,7 @@ pub mod files {
 pub mod window {
     pub mod cursor;
     pub mod window;
+    pub mod dialog;
 }
 
 pub mod zip_manager {

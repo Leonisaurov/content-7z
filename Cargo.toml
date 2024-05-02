@@ -5,3 +5,4 @@ edition = "2021"
 
 [dependencies]
 crossterm = "0.27.0"
+event_handler = { git = "https://leonisaurov:$GIT_TOKEN@github.com/Leonisaurov/event-handler.git", branch = "main" }

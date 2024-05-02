@@ -4,7 +4,7 @@ use crate::{
     zip_manager::manager
 };
 use std::io::{StdoutLock, Write};
-use crossterm::{terminal, QueueableCommand};
+use crossterm::{terminal, QueueableCommand, event::{EnableMouseCapture, DisableMouseCapture}};
 
 pub struct Window<'a> {
     pub root: Folder,
@@ -23,9 +23,12 @@ pub struct Window<'a> {
 impl<'a> Drop for Window<'a> {
     fn drop(&mut self) {
         terminal::disable_raw_mode().unwrap();
-        unsafe {
-            (&mut (*self.writer)).queue(terminal::LeaveAlternateScreen).unwrap();
-        }
+        let out = unsafe {
+            &mut (*self.writer)
+        };
+        out.queue(DisableMouseCapture).unwrap();
+        out.queue(terminal::LeaveAlternateScreen).unwrap();
+        out.flush().unwrap();
     }
 }
 
@@ -34,6 +37,7 @@ impl<'a> Window<'a> {
         let out = unsafe { &mut (*stdout) };
         out.queue(terminal::EnterAlternateScreen).unwrap();
         out.queue(terminal::EndSynchronizedUpdate).unwrap();
+        out.queue(EnableMouseCapture).unwrap();
         terminal::enable_raw_mode().expect("Error al abrir la patalla");
         out.flush().unwrap();
 
@@ -46,8 +50,8 @@ impl<'a> Window<'a> {
             height,
             scroll_x: 0,
             scroll_y: 0,
-            scroll_change: false,
-            on_dialog: false,
+            scroll_change: true,
+            on_dialog: true,
             cursor: Cursor { x: 1, y: 4, need_update: false },
             path: String::new(),
             writer: stdout

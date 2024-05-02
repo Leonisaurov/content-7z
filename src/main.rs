@@ -11,10 +11,18 @@ use std::{
 
 use content_7z::{
     files::entry::Entry,
-    window::window::Window,
+    window::{
+        window::Window,
+        dialog::Dialog
+    }
 };
 
 use content_7z::zip_manager::manager::ZipManager;
+
+use Event_Handler::event_handler::{
+    event_handler::EventsHandler,
+    action::ActionHandle
+};
 
 fn print_header(win: &Window) {
     let fill_all_block = "─".repeat(usize::from(win.width) - 2);
@@ -131,13 +139,57 @@ fn main() {
     win.assing_manager(manager);
 
     print_header(&mut win);
-    print_menu(&mut win);
-    stdout.queue(MoveTo(1, 4)).unwrap();
+
+    let mut handler = EventsHandler::new();
+
+    struct ShowMsg<'a> {
+        win: *mut Window<'a>,
+        dialog: Dialog
+    }
+
+    impl<'a> ShowMsg<'a> {
+        fn new(win: *mut Window<'a>) -> Self {
+            unsafe {
+                Self {
+                    win,
+                    dialog: Dialog::new(&mut(*win), String::new())
+                }
+            }
+        }
+
+        fn add_dialog(&mut self, dialog: Dialog) {
+            self.dialog = dialog;
+        }
+    }
+
+    impl<'a> ActionHandle for ShowMsg<'a> {
+        fn accept(&mut self) -> bool {
+            let win = unsafe {
+                &mut (*self.win)
+            };
+
+            print_menu(&win);
+            print_header(&win);
+
+            win.on_dialog = false;
+
+            true
+        }
+
+        fn denied(&mut self) -> bool {
+            let win = unsafe { &mut (*self.win) };
+            self.dialog.draw(win.writer);
+            win.on_dialog = true;
+            false
+        }
+    }
 
     'mainLoop:
     loop {
         while event::poll(Duration::ZERO).unwrap() {
-            match event::read().unwrap() {
+            let ev = event::read().unwrap();
+            let ev2 = ev.clone();
+            match ev {
                 Event::Key(ev) => {
                     match ev.code {
                         KeyCode::Esc => break 'mainLoop,
@@ -146,7 +198,14 @@ fn main() {
                         KeyCode::Right => win.move_right(),
                         KeyCode::Left => win.move_left(),
 
-                        KeyCode::Char('s') => show_dialog(&mut win, "Hola, como estas?"),
+                        KeyCode::Char('s') => {
+                            let mut action = ShowMsg::new(&mut win);
+                            let mut dialog = Dialog::new(&mut win, String::from("Hola, como estas?"));
+                            action.add_dialog(dialog.clone());
+                            handler.add_event(dialog.event(action));
+                            dialog.draw(&mut stdout);
+                            //show_dialog(&mut win, "Hola, como estas?")
+                        },
 
                         KeyCode::Backspace => win.back_current(),
                         KeyCode::Enter => {
@@ -165,6 +224,7 @@ fn main() {
                 },
                 _ => {}
             }
+            handler.update(&ev2);
         }
 
         if win.scroll_change {
