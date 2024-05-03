@@ -56,7 +56,7 @@ dependencies = [
 [[package]]
 name = "event_handler"
 version = "0.1.0"
-source = "git+https://leonisaurov:$GIT_TOKEN@github.com/Leonisaurov/event-handler.git?branch=main#e7bf5a70edb8ff7871eab395067b2f529ff43570"
+source = "git+https://leonisaurov:$GIT_TOKEN@github.com/Leonisaurov/event-handler.git?branch=main#d86d687ca9575175f1082051d120d4bc29ad8cba"
 dependencies = [
  "crossterm",
 ]

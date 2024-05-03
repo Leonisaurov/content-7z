@@ -1,9 +1,10 @@
+   Compiling event_handler v0.1.0 (https://leonisaurov:$GIT_TOKEN@github.com/Leonisaurov/event-handler.git?branch=main#d86d687c)
    Compiling content-7z v0.1.0 (/data/data/com.termux/files/home/Develop/Rust/content-7z)
-warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `/data/data/com.termux/files/home/Develop/Rust/content-7z/target/debug/incremental/content_7z-jo1sc3511gsj/s-gvsr2z2oqv-1e8hjif-working`
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `/data/data/com.termux/files/home/Develop/Rust/content-7z/target/debug/incremental/content_7z-jo1sc3511gsj/s-gvt8m6qllt-1dorqgs-working`
 
 warning: `content-7z` (lib) generated 1 warning
-warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `/data/data/com.termux/files/home/Develop/Rust/content-7z/target/debug/incremental/content_7z-2a1luiny0rzfh/s-gvsr2zhacn-1le7gqj-working`
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `/data/data/com.termux/files/home/Develop/Rust/content-7z/target/debug/incremental/content_7z-2a1luiny0rzfh/s-gvt8m76ds8-clssvw-working`
 
 warning: `content-7z` (bin "content-7z") generated 1 warning
-    Finished dev [unoptimized + debuginfo] target(s) in 2.28s
+    Finished dev [unoptimized + debuginfo] target(s) in 2.62s
      Running `target/debug/content-7z /data/data/com.termux/files/home/7zTest/any.7z`

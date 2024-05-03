@@ -22,7 +22,7 @@ pub struct Dialog {
 impl Dialog {
     pub fn new(win: &Window, text: String) -> Self {
         let text_len = text.len() as u16;
-        let x = win.width / 2 - text_len;
+        let x = win.width / 2 - text_len / 2;
         let y = win.height / 2 - 1;
 
         Self {

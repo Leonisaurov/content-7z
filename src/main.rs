@@ -21,7 +21,8 @@ use content_7z::zip_manager::manager::ZipManager;
 
 use Event_Handler::event_handler::{
     event_handler::EventsHandler,
-    action::ActionHandle
+    event::HowEvent,
+    action::ActionHandle,
 };
 
 fn print_header(win: &Window) {
@@ -83,43 +84,6 @@ fn print_menu(win: &Window) {
     stdout.write(("└".to_string() + fill_all_block.as_str() + "┘").as_bytes()).unwrap();
 }
 
-fn show_dialog(win: &mut Window, label: &str) {
-    let stdout = unsafe { &mut (*win.writer) };
-    let x: u16 = win.width / 2 - label.len() as u16 / 2;
-    let y: u16 = win.height / 2 - 1;
-
-    let fill_all_block = "─".repeat(label.len());
-
-    stdout.queue(MoveTo(x, y)).unwrap();
-    stdout.write("┌".as_bytes()).unwrap();
-    stdout.write(fill_all_block.as_bytes()).unwrap();
-    stdout.write("┐".as_bytes()).unwrap();
-
-    stdout.queue(MoveTo(x, y + 1)).unwrap();
-    stdout.write("│".as_bytes()).unwrap();
-    stdout.write(label.as_bytes()).unwrap();
-    stdout.write("│".as_bytes()).unwrap();
-
-    stdout.queue(MoveTo(x, y + 2)).unwrap();
-    stdout.write("└".as_bytes()).unwrap();
-    stdout.write(fill_all_block.as_bytes()).unwrap();
-    stdout.write("┘".as_bytes()).unwrap();
-
-    win.on_dialog = true;
-
-    win.cursor.x = win.width / 2;
-    win.cursor.y = win.height / 2;
-
-    win.cursor.need_update = true;
-}
-
-#[allow(dead_code)]
-fn close_dialog(win: &mut Window) {
-    win.on_dialog = false;
-    print_header(win);
-    print_menu(win);
-}
-
 fn main() {
     let args: Vec<String> = args().collect();
     if args.len() != 2 {
@@ -141,6 +105,14 @@ fn main() {
     print_header(&mut win);
 
     let mut handler = EventsHandler::new();
+
+    struct controller;
+
+    impl HowEvent for controller {
+        fn call(&mut self, ev: &Event) -> bool {
+            false
+        }
+    }
 
     struct ShowMsg<'a> {
         win: *mut Window<'a>,
@@ -188,7 +160,10 @@ fn main() {
     loop {
         while event::poll(Duration::ZERO).unwrap() {
             let ev = event::read().unwrap();
-            let ev2 = ev.clone();
+            handler.update(&ev);
+            if win.on_dialog {
+                continue;
+            }
             match ev {
                 Event::Key(ev) => {
                     match ev.code {
@@ -204,7 +179,6 @@ fn main() {
                             action.add_dialog(dialog.clone());
                             handler.add_event(dialog.event(action));
                             dialog.draw(&mut stdout);
-                            //show_dialog(&mut win, "Hola, como estas?")
                         },
 
                         KeyCode::Backspace => win.back_current(),
@@ -214,7 +188,11 @@ fn main() {
                                     Entry::Folder(dir) => win.set_current(dir.clone()),
                                     Entry::File(file_name) => {
                                         let path = win.plain_current() + "/" + file_name;
-                                        show_dialog(&mut win, path.as_str());
+                                        let mut action = ShowMsg::new(&mut win);
+                                        let mut dialog = Dialog::new(&mut win, String::from(path));
+                                        action.add_dialog(dialog.clone());
+                                        handler.add_event(dialog.event(action));
+                                        dialog.draw(&mut stdout);
                                     },
                                 }
                             }
@@ -224,7 +202,6 @@ fn main() {
                 },
                 _ => {}
             }
-            handler.update(&ev2);
         }
 
         if win.scroll_change {
@@ -235,6 +212,7 @@ fn main() {
 
         if win.cursor.need_update {
             win.cursor.need_update = false;
+            handler.update_cursor(win.cursor.x, win.cursor.y);
             let new_y: u16 = (win.get_current().content.len() + 3).try_into().unwrap();
             if !win.on_dialog && win.cursor.y > new_y && new_y != 3 {
                 win.set_cursor(win.cursor.x, new_y);
