@@ -1,6 +1,8 @@
 # Content 7z
 Tool for visualize the content of a 7z file and navigate around the files, all with a friendly TUI.
 
+![A look of the tool](screenshot.png)
+
 ## Index
 1. [Usage](#usage)
 2. [Installation](#install)
