@@ -3,7 +3,7 @@ use dirs::home_dir;
 
 pub fn load() -> Config {
     let mut config_path = home_dir().unwrap();
-    config_path.push(".config/content-7z.conf");
+    config_path.push(".config/content-7z.toml");
 
     let mut settings = Config::default();
     if !config_path.exists() {
