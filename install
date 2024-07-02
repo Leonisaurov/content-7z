@@ -1,4 +1,5 @@
 #!/bin/bash
+
 ubuntu() {
     echo "Ubuntu like:"
     echo -e "\tsudo apt install 7z"
@@ -10,7 +11,10 @@ arch() {
 }
 
 if which 7z &> /dev/null; then
-    cargo run $@
+    cargo build --release
+    cp ./target/release/content-7z $BIN &> /dev/null
+    mkdir -p ~/.config/
+    cp ./content-7z.toml $HOME/.config/content-7z.toml
 else
     echo "The 7z command need to be installed."
     echo "Install it with your package manager:"
