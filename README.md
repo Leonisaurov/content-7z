@@ -6,7 +6,12 @@ Tool for visualize the content of a 7z file and navigate around the files, all w
 2. [Installation](#install)
 
 ## Install
-Give run permissions to the file "install", an execute:
+Give run permissions to the file "install":
+```bash
+chmod +x ./install
+```
+
+And execute:
 ```bash
 ./install
 ```
