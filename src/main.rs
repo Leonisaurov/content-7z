@@ -169,25 +169,6 @@ fn main() {
                         KeyCode::Left => win.move_left(),
 
                         KeyCode::Char('s') => show_dialog(&mut win, "Hola, como estas?"),
-                        // KeyCode::Char('o') => {
-                        //     let cursor_y = win.cursor.y;
-
-                        //     if win.get_current().content.len() > (cursor_y - 4 + win.scroll_y).into() {
-                        //         let entry = &win.get_current().content[usize::from(cursor_y - 4 + win.scroll_y)];
-                        //         let _ = match entry {
-                        //             Entry::File(file_name) => {
-                        //                 // let _ = Command::new("$EDITOR").
-                        //                 //     arg(file_name.as_str()).status().expect("Error al ejecutar el commando");
-                        //                 let fname = file_name.clone();
-                        //                 show_dialog(&mut win, format!("File: {}", fname).as_str());
-                        //             },
-                        //             Entry::Folder(_) => {
-                        //                 // stdout.write("[+] ".as_bytes()).unwrap();
-                        //                 // stdout.write(folder.name.as_bytes()).unwrap()
-                        //             },
-                        //         };
-                        //     }
-                        // },
                         KeyCode::Backspace => win.back_current(),
                         KeyCode::Enter => {
                             if usize::from(win.cursor.y - 4 + win.scroll_y) < win.get_current().content.len() {
@@ -210,6 +191,12 @@ fn main() {
         if win.scroll_change {
             win.scroll_change = false;
             print_menu(&mut win);
+            stdout.queue(MoveTo(win.cursor.x, win.cursor.y)).unwrap();
+        }
+
+        if win.path_change {
+            win.path_change = false;
+            print_header(&win);
             stdout.queue(MoveTo(win.cursor.x, win.cursor.y)).unwrap();
         }
 

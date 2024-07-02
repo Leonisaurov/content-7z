@@ -58,7 +58,7 @@ impl Color {
             ColorType::BG => "48",
         };
 
-        self.repr = format!("\x1b[{};2;{};{};{}m", posfix,self.r, self.b, self.g)
+        self.repr = format!("\x1b[{};2;{};{};{}m", posfix,self.r, self.g, self.b)
     }
 
     pub fn change(&mut self, other: Self) {

@@ -1,0 +1,14 @@
+#!/bin/python
+from sys import argv, exit
+
+def hex_to_rgb(hex_color):
+    hex_color = hex_color.lstrip('#')
+    return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+
+# Ejemplo de uso:
+if len(argv) != 2:
+    print(f"Usage:\n\t{argv[0]} (hex_code)")
+    exit(-1)
+hex_color = argv[1]
+rgb_color = hex_to_rgb(hex_color)
+print(rgb_color)  # Esto imprimirá: (26, 43, 60)

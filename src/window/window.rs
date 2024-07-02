@@ -18,6 +18,7 @@ pub struct Window<'a> {
     pub scroll_x: u16,
     pub scroll_y: u16,
     pub scroll_change: bool,
+    pub path_change: bool,
     pub on_dialog: bool,
     pub cursor: Cursor,
     pub path: String,
@@ -52,6 +53,7 @@ impl<'a> Window<'a> {
             scroll_x: 0,
             scroll_y: 0,
             scroll_change: false,
+            path_change: false,
             on_dialog: false,
             cursor: Cursor { x: 1, y: 4, need_update: false },
             path: String::new(),
@@ -81,6 +83,8 @@ impl<'a> Window<'a> {
         self.current.push(folder);
         self.cursor.need_update = true;
 
+        self.path_change = true;
+
         self.scroll_change = true;
         self.scroll_y = 0;
         self.scroll_x = 0;
@@ -90,6 +94,7 @@ impl<'a> Window<'a> {
         if self.current.len() > 1 {
             self.current.pop().unwrap();
 
+            self.path_change = true;
             self.scroll_change = true;
         }
     }
