@@ -19,6 +19,6 @@
 # border-color = [110, 118, 129]
 
 # Lunaperche
-# text-color = [198, 198, 198]
-# background-color = []
-# border-color = [88, 88, 88]
+text-color = [198, 198, 198]
+background-color = []
+border-color = [88, 88, 88]
