@@ -1,10 +1,14 @@
 use crate::{
     files::folder::Folder,
-    window::cursor::Cursor,
+    window::{
+        cursor::Cursor,
+        scheme::Scheme,
+    },
     zip_manager::manager
 };
 use std::io::{StdoutLock, Write};
 use crossterm::{terminal, QueueableCommand};
+use config::Config;
 
 pub struct Window<'a> {
     pub root: Folder,
@@ -17,7 +21,8 @@ pub struct Window<'a> {
     pub on_dialog: bool,
     pub cursor: Cursor,
     pub path: String,
-    pub writer: *mut StdoutLock<'a>
+    pub scheme: Scheme,
+    pub writer: *mut StdoutLock<'a>,
 }
 
 impl<'a> Drop for Window<'a> {
@@ -30,7 +35,7 @@ impl<'a> Drop for Window<'a> {
 }
 
 impl<'a> Window<'a> {
-    pub fn new(stdout: *mut StdoutLock<'a>) -> Self {
+    pub fn new(stdout: *mut StdoutLock<'a>, config: Config) -> Self {
         let out = unsafe { &mut (*stdout) };
         out.queue(terminal::EnterAlternateScreen).unwrap();
         out.queue(terminal::EndSynchronizedUpdate).unwrap();
@@ -50,7 +55,8 @@ impl<'a> Window<'a> {
             on_dialog: false,
             cursor: Cursor { x: 1, y: 4, need_update: false },
             path: String::new(),
-            writer: stdout
+            scheme: Scheme::from(config),
+            writer: stdout,
         }
     }
 
@@ -154,6 +160,10 @@ impl<'a> Window<'a> {
         self.cursor.x = x;
         self.cursor.y = y;
         self.cursor.need_update = true;
+    }
+
+    pub fn set_scheme(&mut self, scheme: Scheme) {
+        self.scheme = scheme
     }
 }
 

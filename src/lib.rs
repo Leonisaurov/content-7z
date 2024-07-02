@@ -6,8 +6,11 @@ pub mod files {
 pub mod window {
     pub mod cursor;
     pub mod window;
+    pub mod scheme;
 }
 
 pub mod zip_manager {
     pub mod manager;
 }
+
+pub mod config;

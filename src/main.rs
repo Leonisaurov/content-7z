@@ -11,7 +11,11 @@ use std::{
 
 use content_7z::{
     files::entry::Entry,
-    window::window::Window,
+    window::{
+        window::Window,
+        scheme::NOCOLOR
+    },
+    config
 };
 
 use content_7z::zip_manager::manager::ZipManager;
@@ -22,23 +26,31 @@ fn print_header(win: &Window) {
     let path = win.get_path() + win.plain_current().as_str();
 
     stdout.queue(MoveTo(0, 0)).unwrap();
+    stdout.write(win.scheme.background.repr.as_bytes()).unwrap();
+    stdout.write(win.scheme.borders.repr.as_bytes()).unwrap();
     stdout.write(("┌".to_string() + fill_all_block.as_str() + "┐").as_bytes()).unwrap();
 
     stdout.queue(MoveTo(0, 1)).unwrap();
     stdout.queue(Clear(ClearType::CurrentLine)).unwrap();
+    stdout.write(win.scheme.borders.repr.as_bytes()).unwrap();
     stdout.write("│".as_bytes()).unwrap();
     if path.len() > (win.width - 2).into() {
+        stdout.write(win.scheme.text.repr.as_bytes()).unwrap();
         stdout.write("...".as_bytes()).unwrap();
         stdout.write(&path.as_bytes()[path.len() - usize::from(win.width - 5)..path.len()]).unwrap();
     } else {
+        stdout.write(win.scheme.text.repr.as_bytes()).unwrap();
         stdout.write(path.as_bytes()).unwrap();
     }
 
     stdout.queue(MoveTo(win.width - 1, 1)).unwrap();
+    stdout.write(win.scheme.borders.repr.as_bytes()).unwrap();
     stdout.write("│".as_bytes()).unwrap();
 
     stdout.queue(MoveTo(0, 2)).unwrap();
+    stdout.write(win.scheme.borders.repr.as_bytes()).unwrap();
     stdout.write(("└".to_string() + fill_all_block.as_str() + "┘").as_bytes()).unwrap();
+    stdout.write(NOCOLOR).unwrap();
 }
 
 fn print_menu(win: &Window) {
@@ -46,33 +58,43 @@ fn print_menu(win: &Window) {
     let stdout = unsafe { &mut (*win.writer) };
 
     stdout.queue(MoveTo(0, 3)).unwrap();
+    stdout.write(win.scheme.background.repr.as_bytes()).unwrap();
+    stdout.write(win.scheme.borders.repr.as_bytes()).unwrap();
     stdout.write(("┌".to_string() + fill_all_block.as_str() + "┐").as_bytes()).unwrap();
 
     for i in 4..win.height {
         stdout.queue(MoveTo(0, i)).unwrap();
         stdout.queue(terminal::Clear(ClearType::CurrentLine)).unwrap();
+        stdout.write(win.scheme.borders.repr.as_bytes()).unwrap();
         stdout.write("│".as_bytes()).unwrap();
 
         if win.get_current().content.len() > (i - 4 + win.scroll_y).into() {
             let entry = &win.get_current().content[usize::from(i - 4 + win.scroll_y)];
             let _ = match entry {
                 Entry::File(file_name) => {
+                    stdout.write(win.scheme.text.repr.as_bytes()).unwrap();
                     stdout.write("--- ".as_bytes()).unwrap();
+                    stdout.write(win.scheme.text.repr.as_bytes()).unwrap();
                     stdout.write(file_name.as_bytes()).unwrap()
                 },
                 Entry::Folder(folder) => {
+                    stdout.write(win.scheme.text.repr.as_bytes()).unwrap();
                     stdout.write("[+] ".as_bytes()).unwrap();
+                    stdout.write(win.scheme.text.repr.as_bytes()).unwrap();
                     stdout.write(folder.name.as_bytes()).unwrap()
                 },
             };
         }
 
         stdout.queue(MoveTo(win.width - 1, i)).unwrap();
+        stdout.write(win.scheme.borders.repr.as_bytes()).unwrap();
         stdout.write("│".as_bytes()).unwrap();
     }
 
     stdout.queue(MoveTo(0, win.height - 1)).unwrap();
+    stdout.write(win.scheme.borders.repr.as_bytes()).unwrap();
     stdout.write(("└".to_string() + fill_all_block.as_str() + "┘").as_bytes()).unwrap();
+    stdout.write(NOCOLOR).unwrap();
 }
 
 fn show_dialog(win: &mut Window, label: &str) {
@@ -121,7 +143,7 @@ fn main() {
 
     let mut stdout = stdout().lock();
 
-    let mut win = Window::new(&mut stdout);
+    let mut win = Window::new(&mut stdout, config::load());
     let manager = ZipManager::process(&args[1]);
     if manager.err != "" {
         eprintln!("Process Error: {}", manager.err);
@@ -147,7 +169,25 @@ fn main() {
                         KeyCode::Left => win.move_left(),
 
                         KeyCode::Char('s') => show_dialog(&mut win, "Hola, como estas?"),
+                        // KeyCode::Char('o') => {
+                        //     let cursor_y = win.cursor.y;
 
+                        //     if win.get_current().content.len() > (cursor_y - 4 + win.scroll_y).into() {
+                        //         let entry = &win.get_current().content[usize::from(cursor_y - 4 + win.scroll_y)];
+                        //         let _ = match entry {
+                        //             Entry::File(file_name) => {
+                        //                 // let _ = Command::new("$EDITOR").
+                        //                 //     arg(file_name.as_str()).status().expect("Error al ejecutar el commando");
+                        //                 let fname = file_name.clone();
+                        //                 show_dialog(&mut win, format!("File: {}", fname).as_str());
+                        //             },
+                        //             Entry::Folder(_) => {
+                        //                 // stdout.write("[+] ".as_bytes()).unwrap();
+                        //                 // stdout.write(folder.name.as_bytes()).unwrap()
+                        //             },
+                        //         };
+                        //     }
+                        // },
                         KeyCode::Backspace => win.back_current(),
                         KeyCode::Enter => {
                             if usize::from(win.cursor.y - 4 + win.scroll_y) < win.get_current().content.len() {
