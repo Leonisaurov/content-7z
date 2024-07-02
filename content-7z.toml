@@ -1,0 +1,24 @@
+# Catppuccine
+background-color = [30, 30, 46]
+text-color = [205, 214, 244]
+border-color = [69, 71, 90]
+
+# Tokio Dark
+# background-color = [17, 18, 29]
+# text-color = [160, 168, 205]
+# border-color = [74, 80, 87]
+
+# Rose pine
+# text-color = [224, 222, 244]
+# background-color = [25, 23, 36]
+# border-color = [110, 106, 134]
+
+# Github Default
+# text-color = [230, 237, 243]
+# background-color = [13, 17, 23]
+# border-color = [110, 118, 129]
+
+# Lunaperche
+# text-color = [198, 198, 198]
+# background-color = []
+# border-color = [88, 88, 88]
