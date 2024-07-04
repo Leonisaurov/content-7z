@@ -78,6 +78,7 @@ pub struct Scheme {
     pub borders: Color,
     pub text: Color,
     pub type_flag: Color,
+    pub editor: String,
 }
 
 impl Scheme {
@@ -87,6 +88,7 @@ impl Scheme {
             borders: Color::new(255, 255, 255, ColorType::FG),
             text: Color::new(200, 200, 200, ColorType::FG),
             type_flag: Color::new(200, 200, 200, ColorType::FG),
+            editor: String::new(),
         }
     }
 
@@ -103,6 +105,10 @@ impl Scheme {
 
         if let Ok(color) = config.get::<Vec<u8>>("text-color") {
             scheme.text.change(Color::from(color, ColorType::FG));
+        }
+
+        if let Ok(editor) = config.get_string("editor") {
+            scheme.editor = editor;
         }
 
         scheme

@@ -22,3 +22,5 @@
 text-color = [198, 198, 198]
 background-color = []
 border-color = [88, 88, 88]
+
+editor = ""

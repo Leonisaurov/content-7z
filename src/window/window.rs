@@ -25,6 +25,7 @@ pub struct Window<'a> {
     pub path: String,
     pub scheme: Scheme,
     pub handler: Option<Box<dyn Handler>>,
+    pub tmp_dir: String,
     pub writer: *mut StdoutLock<'a>,
 }
 
@@ -39,15 +40,9 @@ impl<'a> Drop for Window<'a> {
 
 impl<'a> Window<'a> {
     pub fn new(stdout: *mut StdoutLock<'a>, config: Config) -> Self {
-        let out = unsafe { &mut (*stdout) };
-        out.queue(terminal::EnterAlternateScreen).unwrap();
-        out.queue(terminal::EndSynchronizedUpdate).unwrap();
-        terminal::enable_raw_mode().expect("Error al abrir la patalla");
-        out.flush().unwrap();
-
         let (width, height) = terminal::size().unwrap();
 
-        Self {
+        let mut window = Self {
             root: Folder::new(""),
             current: vec![],
             width, 
@@ -61,8 +56,19 @@ impl<'a> Window<'a> {
             path: String::new(),
             scheme: Scheme::from(config),
             handler: None,
+            tmp_dir: String::new(),
             writer: stdout,
-        }
+        };
+        window.open_window();
+        window
+    }
+
+    pub fn open_window(&mut self) {
+        let out = self.get_writer();
+        out.queue(terminal::EnterAlternateScreen).unwrap();
+        out.queue(terminal::EndSynchronizedUpdate).unwrap();
+        terminal::enable_raw_mode().expect("Error al abrir la patalla");
+        out.flush().unwrap();
     }
 
     pub fn assign_root(&mut self, folder: Folder) {

@@ -6,7 +6,7 @@ use crossterm::{
 
 use std::{
     time::Duration, io::{stdout, Write}, thread,
-    process::exit, env::args
+    process::{exit, Command, Stdio}, env,
 };
 
 use content_7z::{
@@ -172,12 +172,75 @@ fn close_dialog(win: &mut Window) {
     win.on_dialog = false;
 }
 
-// fn open_file(file_name: String) {
+fn get_temp_dir(win: &mut Window) -> String {
+    if win.tmp_dir == "" {
+        let output = Command::new("mktemp")
+            .args(["-d", "--tmpdir", (String::from("content_7z.") + win.get_path().as_str() + ".XXX").as_str()])
+            .output()
+            .expect("Getting tmp dir fail.");
+        let tmp_dir = String::from_utf8(output.stdout).expect("Cannot get the tmp dir.");
+        win.tmp_dir = String::from(&tmp_dir[..tmp_dir.len() - 1]);
+    }
+    win.tmp_dir.clone()
+}
 
-// } 
+fn open_file(win: &mut Window, file_name: String) {
+    let stdout = unsafe {
+        &mut (*win.writer)
+    };
+
+    stdout.queue(Clear(ClearType::Purge)).unwrap();
+    stdout.flush().unwrap();
+    let tmp_dir = get_temp_dir(win);
+
+    let extract_status = Command::new("7z")
+        .args(["e", win.get_path().as_str(), file_name.as_str(), format!("-o{}", tmp_dir.as_str()).as_str()])
+        .stdout(Stdio::null())
+        .status().expect("Cannot execute the extractor.");
+
+    if extract_status.code().expect("Cannot extract the file from the compress file.") != 0 {
+        // TODO
+        return
+    }
+
+    let shorted_path = if let Some(index) = file_name.rfind("/") {
+        &file_name[index..]
+    } else {
+        file_name.as_str()
+    };
+
+    let editor = if win.scheme.editor != "" {
+        win.scheme.editor.clone()
+    } else if let Ok(editor) = env::var("EDITOR") {
+        editor
+    } else {
+        String::from("editor")
+    };
+
+    let status = Command::new(editor)
+        .arg(tmp_dir + "/" + shorted_path)
+        .status()
+        .expect("Couldnt open the editor");
+
+    if status.code().expect("Cannot stablish connection with the editor") != 0 {
+        // TODO
+    }
+
+    win.open_window();
+    stdout.queue(Clear(ClearType::Purge)).unwrap();
+    stdout.flush().unwrap();
+
+    print_menu(win);
+    print_header(win);
+
+    let stdout = win.get_writer();
+
+    stdout.queue(MoveTo(win.cursor.x, win.cursor.y)).unwrap();
+    stdout.flush().unwrap();
+} 
 
 fn main() {
-    let args: Vec<String> = args().collect();
+    let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
         eprintln!("Usage:\n\t{} {{7zip file}}", &args[0]);
         exit(-1);
@@ -235,8 +298,7 @@ fn main() {
 
                                     let job = NormalHandler::new(|win, situation, data| {
                                         if let HandleSituatonType::SUCESS = situation {
-                                            show_dialog(win, data[0].clone());
-                                            // open_file(data[0].clone());
+                                            open_file(win, data[0].clone());
                                         }
                                     }, vec![absolute_path]);
 
