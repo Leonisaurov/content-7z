@@ -21,7 +21,7 @@ termux() {
 if [[ "$NO_WHICH" == "ACTIVE" ]] || which 7z &> /dev/null; then
     if [[ "$NO_WHICH" == "ACTIVE" ]] || which cargo &> /dev/null; then
         cargo build --release
-        if [ -z "${BIN}" ]; then
+        if ! [ -z "${BIN}" ]; then
             cp ./target/release/content-7z $BIN &> /dev/null
         fi
 
