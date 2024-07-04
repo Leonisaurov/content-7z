@@ -43,6 +43,12 @@ pkg install rust
 In the case of termux, it is currently not possible to use the official rustup binary, so it is required to use the package manager.
 
 ## Install
+Clone this repository with git and get into the source code directory:
+```bash
+git clone 'https://github.com/Leonisaurov/content-7z?tab=readme-ov-file' content-7z
+cd content-7z
+```
+
 Give run permissions to the file "install":
 ```bash
 chmod +x ./install
