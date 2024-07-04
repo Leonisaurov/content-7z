@@ -63,23 +63,18 @@ impl Folder {
                                     folder.add_entry(sub_path, file_type);
                                 } else {
                                     let mut new_entry = Folder::new(path);
-                                    // eprintln!("No folder found: {} / {}", path, sub_path);
                                     new_entry.add_entry(sub_path, file_type);
                                     self.add_folder(new_entry);
                                 }
                             } else {
                                 eprintln!("The subdir cannot be get");
                             }
-                            // eprintln!("In the Main Folder {}.", path);
                             return;
                         }
                         let mut new_entry = Folder::new(path);
-                        // eprintln!("Main Folder {} Added.", path);
                         if let Some(sub_path) = entry.get(i+1..entry.len()) {
                             new_entry.add_entry(sub_path, file_type);
-                            //eprintln!("Se pudo?");
                         }
-                        // eprintln!("In the Main Folder {}.", path);
                         self.add_folder(new_entry);
 
                     } else {
@@ -92,10 +87,8 @@ impl Folder {
 
         if let Some(path) = entry.get(0..entry.len()) {
             if let EntryType::Folder = file_type {
-                // eprintln!("Main Folder {} Added withouth follow.", path);
                 self.add_folder(Folder::new(path))
             } else {
-                // eprintln!("File {} added.", path);
                 self.add_file(path);
             }
         } else {
