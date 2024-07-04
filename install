@@ -38,7 +38,7 @@ if [[ "$NO_WHICH" == "ACTIVE" ]] || which 7z &> /dev/null; then
         termux "rust"
 
         echo "Or in the official wiki:"
-        echo "https://www.rust-lang.org/es/tools/install"
+        echo -e "\x1b[4mhttps://www.rust-lang.org/es/tools/install\x1b[0m"
     fi
 else
     echo "The 7z command need to be installed."
