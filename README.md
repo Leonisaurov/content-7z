@@ -5,6 +5,7 @@ Tool for visualize the content of a 7z file and navigate around the files, all w
 
 ## Index
 1. [Dependencies](#dependencies)
+    - [No which](#which)
 2. [Usage](#usage)
 3. [Installation](#install)
 4. [Configurations](#config-file)
@@ -42,6 +43,30 @@ pkg install rust
 
 In the case of termux, it is currently not possible to use the official rustup binary, so it is required to use the package manager.
 
+<details>
+<summary>NO_WHICH</summary>
+
+### Which
+Another not very relevant dependency is which, it helps the installation file to identify that the other dependencies are present. It is usually installed in most distributions by default, if not, you can use your package manager to do it:
+- Arch like:
+```bash
+pacman -S which
+```
+- Ubuntu like:
+```bash
+apt install which
+```
+- Termux:
+```bash
+pkg install which
+```
+
+If you do not have "which" installed, and do not want to install it, having the dependencies mentioned above, just include the environment variable NO_WHICH=ACTIVE, during the installation, this will cause the compile file to not use which, therefore, it will not check for the presence of the other dependencies.
+```bash
+NO_WHICH=ACTIVE BIN="$PREFIX/bin" ./install
+```
+</details>
+
 ## Install
 Clone this repository with git and get into the source code directory:
 ```bash
@@ -58,8 +83,9 @@ And execute:
 ```bash
 ./install
 ```
+It will compile the program through cargo and if you don't have a configuration file already created, it will create one by default.
 
-It will install the program on the $BIN directory, you can change it how you like:
+The executable will be found in target/release/content-7z, if you want to install it in a more convenient location, set the environment variable BIN to the location where you want the program to be.
 ```bash
 BIN=/usr/local/bin ./install
 ```
