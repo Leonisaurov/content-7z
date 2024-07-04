@@ -14,7 +14,9 @@ if which 7z &> /dev/null; then
     cargo build --release
     cp ./target/release/content-7z $BIN &> /dev/null
     mkdir -p ~/.config/
-    cp ./content-7z.toml $HOME/.config/content-7z.toml
+    if ! [ -e "$HOME/.config/content-7z.toml" ]; then
+        cp ./content-7z.toml $HOME/.config/content-7z.toml
+    fi
 else
     echo "The 7z command need to be installed."
     echo "Install it with your package manager:"
