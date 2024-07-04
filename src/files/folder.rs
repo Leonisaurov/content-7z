@@ -52,7 +52,6 @@ impl Folder {
     }
 
     pub fn add_entry(&mut self, entry: &str, file_type: &EntryType) {
-        // eprintln!("{}", entry);
         for i in 0..entry.len() {
             if let Some(character) = entry.get(i..i+1) {
                 if character == "/" {
@@ -85,16 +84,11 @@ impl Folder {
             }
         }
 
-        if let Some(path) = entry.get(0..entry.len()) {
-            if let EntryType::Folder = file_type {
-                self.add_folder(Folder::new(path))
-            } else {
-                self.add_file(path);
-            }
+        if let EntryType::Folder = file_type {
+            self.add_folder(Folder::new(entry))
         } else {
-            eprintln!("No se pudo?");
+            self.add_file(entry);
         }
-
     }
 
 
