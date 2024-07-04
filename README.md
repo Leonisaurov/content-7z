@@ -55,7 +55,12 @@ And execute:
 
 It will install the program on the $BIN directory, you can change it how you like:
 ```bash
-BIN=/usr/local ./install
+BIN=/usr/local/bin ./install
+```
+
+In termux it would be:
+```bash
+BIN=$PREFIX/bin ./install
 ```
 
 That's it, now you have content-7z on your system
