@@ -1,7 +1,7 @@
 # Content 7z
 Tool for visualize the content of a 7z file and navigate around the files, all with a friendly TUI.
 
-![A look of the tool](screenshot.png)
+[![A look of the tool](https://asciinema.org/a/666845.svg)](https://asciinema.org/a/666845)
 
 ## Index
 1. [Dependencies](#dependencies)
