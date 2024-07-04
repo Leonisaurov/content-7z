@@ -175,7 +175,7 @@ fn close_dialog(win: &mut Window) {
 fn get_temp_dir(win: &mut Window) -> String {
     if win.tmp_dir == "" {
         let output = Command::new("mktemp")
-            .args(["-d", "--tmpdir", (String::from("content_7z.") + win.get_path().as_str() + ".XXX").as_str()])
+            .args(["-d", "--tmpdir", (String::from("content_7z.") + win.get_path().replace("/", "_").as_str() + ".XXX").as_str()])
             .output()
             .expect("Getting tmp dir fail.");
         let tmp_dir = String::from_utf8(output.stdout).expect("Cannot get the tmp dir.");
