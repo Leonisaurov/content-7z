@@ -15,29 +15,29 @@ It has 2 important dependencies, rust and the 7z terminal executable.
 To download 7z just get it from your package manager, for example:
 - Arch like:
 ```bash
-	pacman -S p7zip
+pacman -S p7zip
 ```
 - Ubuntu like:
 ```bash
-	apt install p7zip
+apt install p7zip
 ```
 - Termux:
 ```bash
-	pkg install p7zip
+pkg install p7zip
 ```
 
 It is similar to get rust just follow their [official guide](https://www.rust-lang.org/es/tools/install) by downloading rustup. Or you can try with your package manager:
 - Arch like:
 ```bash
-	pacman -S rust
+pacman -S rust
 ```
 - Ubuntu like:
 ```bash
-	apt install rust
+apt install rust
 ```
 - Termux:
 ```bash
-	pkg install rust
+pkg install rust
 ```
 
 In the case of termux, it is currently not possible to use the official rustup binary, so it is required to use the package manager.
