@@ -1,26 +1,52 @@
 #!/bin/bash
 
 ubuntu() {
+    package=$1
     echo "Ubuntu like:"
-    echo -e "\tsudo apt install 7z"
+    echo -e "\tsudo apt install $package"
 }
 
 arch() {
+    package=$1
     echo "Archlinux like:"
-    echo -e "\tsudo pacman -S 7z"
+    echo -e "\tsudo pacman -S $package"
 }
 
-if which 7z &> /dev/null; then
-    cargo build --release
-    cp ./target/release/content-7z $BIN &> /dev/null
-    mkdir -p ~/.config/
-    if ! [ -e "$HOME/.config/content-7z.toml" ]; then
-        cp ./content-7z.toml $HOME/.config/content-7z.toml
+termux() {
+    package=$1
+    echo "Termux:"
+    echo -e "\tpkg install $package"
+}
+
+if [[ "$NO_WHICH" == "ACTIVE" ]] || which 7z &> /dev/null; then
+    if [[ "$NO_WHICH" == "ACTIVE" ]] || which cargo &> /dev/null; then
+        cargo build --release
+        if [ -z "${BIN}" ]; then
+            cp ./target/release/content-7z $BIN &> /dev/null
+        fi
+
+        mkdir -p ~/.config/
+        if ! [ -e "$HOME/.config/content-7z.toml" ]; then
+            cp ./content-7z.toml $HOME/.config/content-7z.toml
+        fi
+    else
+        echo "The rust command need to be installed."
+
+        echo "Install it with your package manager:"
+        ubuntu "rust"
+        arch "rust"
+        termux "rust"
+
+        echo "Or in the official wiki:"
+        echo "https://www.rust-lang.org/es/tools/install"
     fi
 else
     echo "The 7z command need to be installed."
+
     echo "Install it with your package manager:"
-    ubuntu
-    arch
-    echo "Or what you have"
+    ubuntu "p7zip"
+    arch "p7zip"
+    termux "p7zip"
+
+    echo "Or how you like to."
 fi
