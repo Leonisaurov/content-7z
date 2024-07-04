@@ -179,11 +179,7 @@ fn get_temp_dir(win: &mut Window) -> String {
             .output()
             .expect("Getting tmp dir fail.");
         let tmp_dir = String::from_utf8(output.stdout).expect("Cannot get the tmp dir.");
-        win.tmp_dir = if tmp_dir.chars().nth(tmp_dir.len() - 2).expect("Unable to set the tmp dir") == '/' {
-            String::from(&tmp_dir[..tmp_dir.len() - 2])
-        } else {
-            String::from(&tmp_dir[..tmp_dir.len() - 1])
-        };
+        win.tmp_dir = String::from(&tmp_dir[..tmp_dir.len() - 1]);
     }
     win.tmp_dir.clone()
 }
@@ -214,7 +210,7 @@ fn open_file(win: &mut Window, file_name: String) {
     }
 
     let shorted_path = if let Some(index) = file_name.rfind("/") {
-        &file_name[index..]
+        &file_name[index + 1..]
     } else {
         file_name.as_str()
     };
