@@ -3,7 +3,7 @@ use crate::{
     window::{
         cursor::Cursor,
         scheme::Scheme,
-        handler::Handler,
+        handler::{Handler, HandleSituatonType},
     },
     zip_manager::manager
 };
@@ -24,7 +24,7 @@ pub struct Window<'a> {
     pub cursor: Cursor,
     pub path: String,
     pub scheme: Scheme,
-    pub job: Option<Handler>,
+    pub handler: Option<Box<dyn Handler>>,
     pub writer: *mut StdoutLock<'a>,
 }
 
@@ -60,7 +60,7 @@ impl<'a> Window<'a> {
             cursor: Cursor { x: 1, y: 4, need_update: false },
             path: String::new(),
             scheme: Scheme::from(config),
-            job: None,
+            handler: None,
             writer: stdout,
         }
     }
@@ -172,6 +172,12 @@ impl<'a> Window<'a> {
 
     pub fn set_scheme(&mut self, scheme: Scheme) {
         self.scheme = scheme
+    }
+
+    pub fn run_job(&mut self, situation: HandleSituatonType) {
+        if let Some(job) = self.handler.take() {
+            job.execute(self, situation);
+        }
     }
 }
 

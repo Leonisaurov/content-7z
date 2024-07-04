@@ -14,7 +14,7 @@ use content_7z::{
     window::{
         window::Window,
         scheme::NOCOLOR,
-        handler::{Handler, HandleSituatonType},
+        handler::{Handler, HandleSituatonType, NormalHandler},
     },
     config
 };
@@ -127,7 +127,7 @@ fn show_dialog(win: &mut Window, label: String) {
 
 const HELP_ANSWER_LABEL: &str = "y(es),n(o)";
 
-fn show_confirm_dialog(win: &mut Window, label: String, handler: Handler) {
+fn show_confirm_dialog<T: Handler + 'static>(win: &mut Window, label: String, handler: T) {
     let stdout = unsafe { &mut (*win.writer) };
 
     let max = if label.len() < 10 {
@@ -161,16 +161,20 @@ fn show_confirm_dialog(win: &mut Window, label: String, handler: Handler) {
     win.on_dialog = true;
 
     stdout.queue(MoveTo(win.width / 2, win.height / 2)).unwrap();
-    win.job = Some(handler);
+    win.handler = Some(Box::new(handler));
 }
 
-#[allow(dead_code)]
 fn close_dialog(win: &mut Window) {
-    win.on_dialog = false;
-    win.scroll_change = true;
-    win.path_change = true;
+    print_header(win);
+    print_menu(win);
+
     win.cursor.need_update = true;
+    win.on_dialog = false;
 }
+
+// fn open_file(file_name: String) {
+
+// } 
 
 fn main() {
     let args: Vec<String> = args().collect();
@@ -199,19 +203,11 @@ fn main() {
         while event::poll(Duration::ZERO).unwrap() {
             if win.on_dialog {
                 if let Event::Key(key) = event::read().unwrap() {
-                    if let Some(job) = win.job {
-                        print_header(&mut win);
-                        print_menu(&mut win);
-                        stdout.queue(MoveTo(win.cursor.x, win.cursor.y)).unwrap();
-                        win.on_dialog = false;
-
-                        match key.code {
-                            KeyCode::Char('y') => job(&mut win, HandleSituatonType::SUCESS),
-                            KeyCode::Char('c') => job(&mut win, HandleSituatonType::DENIED),
-                            _ => {}
-                        }
-                    } else {
-                        close_dialog(&mut win);
+                    close_dialog(&mut win);
+                    match key.code {
+                        KeyCode::Char('y') => win.run_job(HandleSituatonType::SUCESS),
+                        KeyCode::Char('c') => win.run_job(HandleSituatonType::DENIED),
+                        _ => {}
                     }
                 }
                 break;
@@ -235,14 +231,16 @@ fn main() {
                                 if let Entry::File(file_name) = &win.get_current().content[usize::from(win.cursor.y - 4 + win.scroll_y)] {
                                     let path = win.plain_current() + "/" + file_name;
                                     let absolute_path = String::from(&path[1..]);
+                                    let message = format!("Open '{}'?", absolute_path);
 
-                                    // show_dialog(&mut win, absolute_path);
-                                    show_confirm_dialog(&mut win, absolute_path, |win, situation| {
-                                        match situation {
-                                            HandleSituatonType::SUCESS => show_dialog(win, String::from("open")),
-                                            HandleSituatonType::DENIED => {}
+                                    let job = NormalHandler::new(|win, situation, data| {
+                                        if let HandleSituatonType::SUCESS = situation {
+                                            show_dialog(win, data[0].clone());
+                                            // open_file(data[0].clone());
                                         }
-                                    });
+                                    }, vec![absolute_path]);
+
+                                    show_confirm_dialog(&mut win, message, job);
                                     continue 'mainLoop;
                                 }
                             }
