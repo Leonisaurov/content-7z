@@ -3,6 +3,7 @@ use crate::{
     window::{
         cursor::Cursor,
         scheme::Scheme,
+        handler::Handler,
     },
     zip_manager::manager
 };
@@ -23,6 +24,7 @@ pub struct Window<'a> {
     pub cursor: Cursor,
     pub path: String,
     pub scheme: Scheme,
+    pub job: Option<Handler>,
     pub writer: *mut StdoutLock<'a>,
 }
 
@@ -58,6 +60,7 @@ impl<'a> Window<'a> {
             cursor: Cursor { x: 1, y: 4, need_update: false },
             path: String::new(),
             scheme: Scheme::from(config),
+            job: None,
             writer: stdout,
         }
     }

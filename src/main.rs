@@ -13,7 +13,8 @@ use content_7z::{
     files::entry::Entry,
     window::{
         window::Window,
-        scheme::NOCOLOR
+        scheme::NOCOLOR,
+        handler::{Handler, HandleSituatonType},
     },
     config
 };
@@ -97,7 +98,7 @@ fn print_menu(win: &Window) {
     stdout.write(NOCOLOR).unwrap();
 }
 
-fn show_dialog(win: &mut Window, label: &str) {
+fn show_dialog(win: &mut Window, label: String) {
     let stdout = unsafe { &mut (*win.writer) };
     let x: u16 = win.width / 2 - label.len() as u16 / 2;
     let y: u16 = win.height / 2 - 1;
@@ -121,17 +122,54 @@ fn show_dialog(win: &mut Window, label: &str) {
 
     win.on_dialog = true;
 
-    win.cursor.x = win.width / 2;
-    win.cursor.y = win.height / 2;
+    stdout.queue(MoveTo(win.width / 2, win.height / 2)).unwrap();
+}
 
-    win.cursor.need_update = true;
+const HELP_ANSWER_LABEL: &str = "y(es),n(o)";
+
+fn show_confirm_dialog(win: &mut Window, label: String, handler: Handler) {
+    let stdout = unsafe { &mut (*win.writer) };
+
+    let max = if label.len() < 10 {
+        HELP_ANSWER_LABEL.len()
+    } else {
+        label.len()
+    };
+
+    let x: u16 = win.width / 2 - max as u16 / 2;
+    let y: u16 = win.height / 2 - 1;
+
+    let fill_all_block = "─".repeat(label.len());
+
+    stdout.queue(MoveTo(x, y)).unwrap();
+    stdout.write("┌".as_bytes()).unwrap();
+    stdout.write(fill_all_block.as_bytes()).unwrap();
+    stdout.write("┐".as_bytes()).unwrap();
+
+    stdout.queue(MoveTo(x, y + 1)).unwrap();
+    stdout.write("│".as_bytes()).unwrap();
+    stdout.write(label.as_bytes()).unwrap();
+    stdout.write("│".as_bytes()).unwrap();
+
+    stdout.queue(MoveTo(x, y + 2)).unwrap();
+    stdout.write("└".as_bytes()).unwrap();
+    stdout.write(fill_all_block.as_bytes()).unwrap();
+    stdout.write("┘".as_bytes()).unwrap();
+    stdout.queue(MoveTo(x + (max / 2) as u16 - (HELP_ANSWER_LABEL.len() / 2) as u16, y + 2)).unwrap();
+    stdout.write(HELP_ANSWER_LABEL.as_bytes()).unwrap();
+
+    win.on_dialog = true;
+
+    stdout.queue(MoveTo(win.width / 2, win.height / 2)).unwrap();
+    win.job = Some(handler);
 }
 
 #[allow(dead_code)]
 fn close_dialog(win: &mut Window) {
     win.on_dialog = false;
-    print_header(win);
-    print_menu(win);
+    win.scroll_change = true;
+    win.path_change = true;
+    win.cursor.need_update = true;
 }
 
 fn main() {
@@ -159,25 +197,61 @@ fn main() {
     'mainLoop:
     loop {
         while event::poll(Duration::ZERO).unwrap() {
+            if win.on_dialog {
+                if let Event::Key(key) = event::read().unwrap() {
+                    if let Some(job) = win.job {
+                        print_header(&mut win);
+                        print_menu(&mut win);
+                        stdout.queue(MoveTo(win.cursor.x, win.cursor.y)).unwrap();
+                        win.on_dialog = false;
+
+                        match key.code {
+                            KeyCode::Char('y') => job(&mut win, HandleSituatonType::SUCESS),
+                            KeyCode::Char('c') => job(&mut win, HandleSituatonType::DENIED),
+                            _ => {}
+                        }
+                    } else {
+                        close_dialog(&mut win);
+                    }
+                }
+                break;
+            }
             match event::read().unwrap() {
                 Event::Key(ev) => {
                     match ev.code {
                         KeyCode::Esc => break 'mainLoop,
+                        KeyCode::Char('q') => break 'mainLoop,
                         KeyCode::Up => win.move_up(),
                         KeyCode::Down => win.move_down(),
                         KeyCode::Right => win.move_right(),
                         KeyCode::Left => win.move_left(),
+                        KeyCode::Char('p') => {
+                            let path = win.plain_current();
+                            show_dialog(&mut win, path);
+                            continue 'mainLoop;
+                        },
+                        KeyCode::Char('o') => {
+                            if usize::from(win.cursor.y - 4 + win.scroll_y) < win.get_current().content.len() {
+                                if let Entry::File(file_name) = &win.get_current().content[usize::from(win.cursor.y - 4 + win.scroll_y)] {
+                                    let path = win.plain_current() + "/" + file_name;
+                                    let absolute_path = String::from(&path[1..]);
 
-                        KeyCode::Char('s') => show_dialog(&mut win, "Hola, como estas?"),
+                                    // show_dialog(&mut win, absolute_path);
+                                    show_confirm_dialog(&mut win, absolute_path, |win, situation| {
+                                        match situation {
+                                            HandleSituatonType::SUCESS => show_dialog(win, String::from("open")),
+                                            HandleSituatonType::DENIED => {}
+                                        }
+                                    });
+                                    continue 'mainLoop;
+                                }
+                            }
+                        }
                         KeyCode::Backspace => win.back_current(),
                         KeyCode::Enter => {
                             if usize::from(win.cursor.y - 4 + win.scroll_y) < win.get_current().content.len() {
-                                match &win.get_current().content[usize::from(win.cursor.y - 4 + win.scroll_y)] {
-                                    Entry::Folder(dir) => win.set_current(dir.clone()),
-                                    Entry::File(file_name) => {
-                                        let path = win.plain_current() + "/" + file_name;
-                                        show_dialog(&mut win, path.as_str());
-                                    },
+                                if let Entry::Folder(dir) = &win.get_current().content[usize::from(win.cursor.y - 4 + win.scroll_y)] {
+                                    win.set_current(dir.clone());
                                 }
                             }
                         },

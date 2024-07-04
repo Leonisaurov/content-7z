@@ -7,6 +7,7 @@ pub mod window {
     pub mod cursor;
     pub mod window;
     pub mod scheme;
+    pub mod handler;
 }
 
 pub mod zip_manager {
