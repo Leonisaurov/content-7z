@@ -43,10 +43,10 @@ pkg install rust
 
 In the case of termux, it is currently not possible to use the official rustup binary, so it is required to use the package manager.
 
+### Which
 <details>
 <summary>NO_WHICH</summary>
 
-### Which
 Another not very relevant dependency is which, it helps the installation file to identify that the other dependencies are present. It is usually installed in most distributions by default, if not, you can use your package manager to do it:
 - Arch like:
 ```bash
