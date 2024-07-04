@@ -179,9 +179,6 @@ fn get_temp_dir(win: &mut Window) -> String {
             .output()
             .expect("Getting tmp dir fail.");
         let tmp_dir = String::from_utf8(output.stdout).expect("Cannot get the tmp dir.");
-        if let Ok(stderr) = String::from_utf8(output.stderr) {
-            eprintln!("mktemp stderr: {}", stderr)
-        }
         win.tmp_dir = String::from(&tmp_dir[..tmp_dir.len() - 1]);
     }
     win.tmp_dir.clone()
