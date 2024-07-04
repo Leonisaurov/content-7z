@@ -78,6 +78,12 @@ To open a file, press 'o' while your cursor is over the file to open, it will op
 - If there is not one defined in the configuration file, it will look to see if the environment variable "EDITOR" is defined, if it is, it will use that editor.
 - If none of the above works, it will run the 'editor' binary.
 
+You can try 'content-7z' in the compress_examples folder, with compressed files in different formats.
+```bash
+cd ./compressed_examples
+content-7z any.7z
+```
+
 ## Config File
 The configuration file, using the toml format, is called "content-7z.toml", and is located in "$HOME/.config/content-7z.toml".
 A basic configuration file will be created automatically when installing the program.
