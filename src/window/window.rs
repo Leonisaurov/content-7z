@@ -35,6 +35,8 @@ impl<'a> Drop for Window<'a> {
         unsafe {
             (&mut (*self.writer)).queue(terminal::LeaveAlternateScreen).unwrap();
         }
+
+        self.handler.take();
     }
 }
 

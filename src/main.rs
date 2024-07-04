@@ -194,11 +194,17 @@ fn open_file(win: &mut Window, file_name: String) {
     let tmp_dir = get_temp_dir(win);
 
     let extract_status = Command::new("7z")
-        .args(["e", win.get_path().as_str(), file_name.as_str(), format!("-o{}", tmp_dir.as_str()).as_str()])
+        .args(["e", win.get_path().as_str(), file_name.as_str(), "-y", format!("-o{}", tmp_dir.as_str()).as_str()])
         .stdout(Stdio::null())
         .status().expect("Cannot execute the extractor.");
 
     if extract_status.code().expect("Cannot extract the file from the compress file.") != 0 {
+        print_menu(win);
+        print_header(win);
+
+        stdout.queue(MoveTo(win.cursor.x, win.cursor.y)).unwrap();
+        stdout.flush().unwrap();
+
         // TODO
         return
     }
@@ -232,8 +238,6 @@ fn open_file(win: &mut Window, file_name: String) {
 
     print_menu(win);
     print_header(win);
-
-    let stdout = win.get_writer();
 
     stdout.queue(MoveTo(win.cursor.x, win.cursor.y)).unwrap();
     stdout.flush().unwrap();
