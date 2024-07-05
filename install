@@ -21,6 +21,18 @@ termux() {
 if [[ "$NO_WHICH" == "ACTIVE" ]] || which 7z &> /dev/null; then
     if [[ "$NO_WHICH" == "ACTIVE" ]] || which cargo &> /dev/null; then
         cargo build --release
+        if [[ "$NO_ELF_CLEANER" != "ACTIVE" ]] && uname --all | grep "Android" &> /dev/null; then
+            echo "Termux detected."
+            if [[ "$NO_WHICH" == "ACTIVE" ]] || which termux-elf-cleaner &> /dev/null; then
+                echo "Cleaning elf header with termux-elf-cleaner."
+                termux-elf-cleaner ./target/release/content-7z
+            else
+                echo "No termux-elf-cleaner found."
+                echo "We use termux-elf-cleaner to clean the elf header, not being able to do so may cause problems in the correct execution of the program on some devices."
+                termux "termux-elf-cleaner"
+            fi
+        fi
+
         if ! [ -z "${BIN}" ]; then
             cp ./target/release/content-7z $BIN &> /dev/null
         fi

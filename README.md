@@ -6,6 +6,7 @@ Tool for visualize the content of a 7z file and navigate around the files, all w
 ## Index
 1. [Dependencies](#dependencies)
     - [No which](#which)
+    - [Clean Elf Header on Termux](#termux-elf-cleaner)
 2. [Usage](#usage)
 3. [Installation](#install)
 4. [Configurations](#config-file)
@@ -65,6 +66,27 @@ pkg install which
 If you do not have "which" installed, and do not want to install it, having the dependencies mentioned above, just include the environment variable NO_WHICH=ACTIVE, during the installation, this will cause the compile file to not use which, therefore, it will not check for the presence of the other dependencies.
 ```bash
 NO_WHICH=ACTIVE BIN="$PREFIX/bin" ./install
+```
+</details>
+
+### Termux Elf Cleaner
+<details>
+    <summary>Clean elf header on termux</summary>
+A suggested dependency when using content-7z in termux, is the termux-elf-cleaner package, which allows you to remove certain unoptimizable values for android that this section of the executable may have.
+
+Normally it is not necessary, but not using it can cause anything from minor tool compatibility issues, to the continued appearance of an incompatibility message in the elf header every time the tool is used, for example:
+```
+WARNING: linker: /data/data/com.termux/files/usr/bin/content-7z: unsupport flags DT_FLAGS_1=0×8000001
+```
+
+To prevent any kind of error or incompatibility you can install termux-elf-cleaner with your package manager:
+```bash
+pkg install termux-elf-cleaner
+```
+
+Whether you want to skip the message the installer gives about downloading termux-elf-cleaner, or prevent it from using it, you can declare the environment variable NO_ELF_CLEANER="ACTIVE" during installation, your install command might look like this:
+```bash
+NO_ELF_CLEANER="ACTIVE" ./install
 ```
 </details>
 
