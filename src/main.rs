@@ -179,26 +179,50 @@ fn close_dialog(win: &mut Window) {
 fn get_temp_dir(win: &mut Window) -> String {
     if win.tmp_dir == "" {
         let output = Command::new("mktemp")
-            .args(["-d", "--tmpdir", (String::from("content_7z.") + win.get_path().replace("/", "_").as_str() + ".XXX").as_str()])
+            .args(["-d", "--tmpdir", "content_7z.XXX"])
             .output()
             .expect("Getting tmp dir fail.");
         let tmp_dir = String::from_utf8(output.stdout).expect("Cannot get the tmp dir.");
         win.tmp_dir = String::from(&tmp_dir[..tmp_dir.len() - 1]);
     }
-    win.tmp_dir.clone()
+    win.tmp_dir.clone() + "/" + win.get_path().as_str()
 }
 
 fn open_file(win: &mut Window, file_name: String) {
+    // Getting the tmp dir for this session
+    let tmp_dir = get_temp_dir(win);
     let stdout = unsafe {
         &mut (*win.writer)
     };
 
     stdout.queue(Clear(ClearType::Purge)).unwrap();
     stdout.flush().unwrap();
-    let tmp_dir = get_temp_dir(win);
 
+    let path = if let Some(path) = file_name.rfind("/") {
+        vec![&file_name[..path + 1], &file_name[path + 1..]]
+    } else {
+        vec!["/", file_name.as_str()]
+    };
+
+    // Making the path directories
+    let mkdir_status = Command::new("mkdir")
+        .args(["-p", (tmp_dir.clone() + path[0]).as_str()])
+        .stdout(Stdio::null())
+        .status().expect("Cannot communicate with the terminal");
+
+    if mkdir_status.code().expect("Cannot communicate with the 'mkdir' command") != 0 {
+        print_menu(win);
+        print_header(win);
+
+        stdout.queue(MoveTo(win.cursor.x, win.cursor.y)).unwrap();
+        stdout.flush().unwrap();
+        // TODO
+        return;
+    }
+
+    // Extracting the file to: tmp_dir + path[0]
     let extract_status = Command::new("7z")
-        .args(["e", win.get_path().as_str(), file_name.as_str(), "-y", format!("-o{}", tmp_dir.as_str()).as_str()])
+        .args(["e", win.get_path().as_str(), &file_name[1..], format!("-o{}/{}", tmp_dir, path[0]).as_str()])
         .stdout(Stdio::null())
         .status().expect("Cannot execute the extractor.");
 
@@ -208,16 +232,9 @@ fn open_file(win: &mut Window, file_name: String) {
 
         stdout.queue(MoveTo(win.cursor.x, win.cursor.y)).unwrap();
         stdout.flush().unwrap();
-
         // TODO
         return
     }
-
-    let shorted_path = if let Some(index) = file_name.rfind("/") {
-        &file_name[index + 1..]
-    } else {
-        file_name.as_str()
-    };
 
     let editor = if win.scheme.editor != "" {
         win.scheme.editor.clone()
@@ -227,8 +244,9 @@ fn open_file(win: &mut Window, file_name: String) {
         String::from("editor")
     };
 
+    // Opening tmp_dir + path
     let status = Command::new(editor)
-        .arg(tmp_dir + "/" + shorted_path)
+        .arg(tmp_dir + "/" + file_name.as_str())
         .status()
         .expect("Couldnt open the editor");
 
@@ -301,14 +319,13 @@ fn main() {
                             if usize::from(win.cursor.y - 4 + win.scroll_y) < win.get_current().content.len() {
                                 if let Entry::File(file_name) = &win.get_current().content[usize::from(win.cursor.y - 4 + win.scroll_y)] {
                                     let path = win.plain_current() + "/" + file_name;
-                                    let absolute_path = String::from(&path[1..]);
-                                    let message = format!("Open '{}'?", absolute_path);
+                                    let message = format!("Open '{}'?", path);
 
                                     let job = NormalHandler::new(|win, situation, data| {
                                         if let HandleSituatonType::SUCESS = situation {
                                             open_file(win, data[0].clone());
                                         }
-                                    }, vec![absolute_path]);
+                                    }, vec![path]);
 
                                     show_confirm_dialog(&mut win, message, job);
                                     continue 'mainLoop;
