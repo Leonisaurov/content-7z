@@ -174,7 +174,7 @@ It has 8 customizable properties, which can be text strings, or rgb colors (defi
 - editor to use (default: "")
 
 Colors can be defined in 2 ways:
-1. RGB: a list of 3 numbers ranging from:
+1. RGB: a list of 3 numbers representing red, green and blue,  ranging from:
 ```toml
 *-color = [0, 0, 0, 0]
 ```
