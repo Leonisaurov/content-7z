@@ -151,16 +151,41 @@ A basic configuration file will be created automatically when installing the pro
 # background-color = []
 # border-color = [88, 88, 88]
 
+# Fancy colored icons
+# folder-bullet = " \ue5fe "
+# folder-bullet-color = "1;34"
+
+# file-bullet = " \uea7b "
+# file-bullet-color = "38;2;88;88;88;1"
+
 # editor = ""
 ```
 
 You can uncomment some lines of the configuration file to set the properties and test the themes or create your own, it is advisable to uncomment and assign the editor configuration line, "editor", so that content-7z can identify which editor to use specifically.
 
-It has 4 customizable properties, which can be text strings, or rgb colors (defined as a list of 3 numbers) depending on which property it is:
-- background color (default: [0, 0, 0, 0])
-- text color (default: [200, 200, 200])
-- border color (default: [255, 255, 255, 255])
+It has 8 customizable properties, which can be text strings, or rgb colors (defined as a list of 3 numbers) depending on which property it is:
+- background-color (default: [0, 0, 0, 0])
+- text-color (default: [200, 200, 200])
+- border-color (default: [255, 255, 255, 255])
+- folder-bullet (default: "[+]")
+- folder-bullet-color (default: [200, 200, 200])
+- file-bullet (default: "--- ")
+- file-bullet-color (default: [200, 200, 200])
 - editor to use (default: "")
+
+Colors can be defined in 2 ways:
+1. RGB: a list of 3 numbers ranging from:
+```toml
+*-color = [0, 0, 0, 0]
+```
+to:
+```toml
+*-color = [255, 255, 255]
+```
+2. Ansi codes: you can also use a text, which has the central part of an ansi code to change colors, e.g. To use the blue color of the terminal, but in bold:
+```toml
+*-color = "1;34"
+```
 
 ## Contribute
 The repository is completely open to contributions, just make a pull request and as far as possible, I will try to see them and accept them.
