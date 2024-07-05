@@ -23,4 +23,11 @@
 # background-color = []
 # border-color = [88, 88, 88]
 
+# Fancy colored icons
+# folder-bullet = " \ue5fe "
+# folder-bullet-color = "1;34"
+
+# file-bullet = " \uea7b "
+# file-bullet-color = "38;2;88;88;88;1"
+
 # editor = ""

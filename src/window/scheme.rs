@@ -74,20 +74,26 @@ impl Color {
 }
 
 pub struct Scheme {
-    pub background: Color,
-    pub borders: Color,
-    pub text: Color,
-    pub type_flag: Color,
+    pub background_color: Color,
+    pub border_color: Color,
+    pub text_color: Color,
+    pub folder_bullet: String,
+    pub folder_bullet_color: Color,
+    pub file_bullet: String,
+    pub file_bullet_color: Color,
     pub editor: String,
 }
 
 impl Scheme {
     pub fn new() -> Self {
         Self {
-            background: Color::new(0, 0, 0, ColorType::BG),
-            borders: Color::new(255, 255, 255, ColorType::FG),
-            text: Color::new(200, 200, 200, ColorType::FG),
-            type_flag: Color::new(200, 200, 200, ColorType::FG),
+            background_color: Color::new(0, 0, 0, ColorType::BG),
+            border_color: Color::new(255, 255, 255, ColorType::FG),
+            text_color: Color::new(200, 200, 200, ColorType::FG),
+            folder_bullet: String::from("[+] "),
+            folder_bullet_color: Color::new(200, 200, 200, ColorType::FG),
+            file_bullet: String::from("--- "),
+            file_bullet_color: Color::new(200, 200, 200, ColorType::FG),
             editor: String::new(),
         }
     }
@@ -96,15 +102,41 @@ impl Scheme {
         let mut scheme = Self::new();
 
         if let Ok(color) = config.get::<Vec<u8>>("background-color") {
-            scheme.background.change(Color::from(color, ColorType::BG));
+            scheme.background_color.change(Color::from(color, ColorType::BG));
+        } else if let Ok(color) = config.get_string("background-color") {
+            scheme.background_color.repr = format!("\x1b[{}m", color);
         }
 
         if let Ok(color) = config.get::<Vec<u8>>("border-color") {
-            scheme.borders.change(Color::from(color, ColorType::FG));
+            scheme.border_color.change(Color::from(color, ColorType::FG));
+        } else if let Ok(color) = config.get_string("border-color") {
+            scheme.border_color.repr = format!("\x1b[{}m", color);
         }
 
         if let Ok(color) = config.get::<Vec<u8>>("text-color") {
-            scheme.text.change(Color::from(color, ColorType::FG));
+            scheme.text_color.change(Color::from(color, ColorType::FG));
+        } else if let Ok(color) = config.get_string("text-color") {
+            scheme.text_color.repr = format!("\x1b[{}m", color);
+        }
+
+        if let Ok(bullet) = config.get_string("folder-bullet") {
+            scheme.folder_bullet = bullet;
+        }
+
+        if let Ok(color) = config.get::<Vec<u8>>("folder-bullet-color") {
+            scheme.folder_bullet_color.change(Color::from(color, ColorType::FG));
+        } else if let Ok(color) = config.get_string("folder-bullet-color") {
+            scheme.folder_bullet_color.repr = format!("\x1b[{}m", color);
+        }
+        
+        if let Ok(bullet) = config.get_string("file-bullet") {
+            scheme.file_bullet = bullet;
+        }
+
+        if let Ok(color) = config.get::<Vec<u8>>("file-bullet-color") {
+            scheme.file_bullet_color.change(Color::from(color, ColorType::FG));
+        } else if let Ok(color) = config.get_string("file-bullet-color") {
+            scheme.file_bullet_color.repr = format!("\x1b[{}m", color);
         }
 
         if let Ok(editor) = config.get_string("editor") {

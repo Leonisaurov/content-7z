@@ -27,29 +27,29 @@ fn print_header(win: &Window) {
     let path = win.get_path() + win.plain_current().as_str();
 
     stdout.queue(MoveTo(0, 0)).unwrap();
-    stdout.write(win.scheme.background.repr.as_bytes()).unwrap();
-    stdout.write(win.scheme.borders.repr.as_bytes()).unwrap();
+    stdout.write(win.scheme.background_color.repr.as_bytes()).unwrap();
+    stdout.write(win.scheme.border_color.repr.as_bytes()).unwrap();
     stdout.write(("┌".to_string() + fill_all_block.as_str() + "┐").as_bytes()).unwrap();
 
     stdout.queue(MoveTo(0, 1)).unwrap();
     stdout.queue(Clear(ClearType::CurrentLine)).unwrap();
-    stdout.write(win.scheme.borders.repr.as_bytes()).unwrap();
+    stdout.write(win.scheme.border_color.repr.as_bytes()).unwrap();
     stdout.write("│".as_bytes()).unwrap();
     if path.len() > (win.width - 2).into() {
-        stdout.write(win.scheme.text.repr.as_bytes()).unwrap();
+        stdout.write(win.scheme.text_color.repr.as_bytes()).unwrap();
         stdout.write("...".as_bytes()).unwrap();
         stdout.write(&path.as_bytes()[path.len() - usize::from(win.width - 5)..path.len()]).unwrap();
     } else {
-        stdout.write(win.scheme.text.repr.as_bytes()).unwrap();
+        stdout.write(win.scheme.text_color.repr.as_bytes()).unwrap();
         stdout.write(path.as_bytes()).unwrap();
     }
 
     stdout.queue(MoveTo(win.width - 1, 1)).unwrap();
-    stdout.write(win.scheme.borders.repr.as_bytes()).unwrap();
+    stdout.write(win.scheme.border_color.repr.as_bytes()).unwrap();
     stdout.write("│".as_bytes()).unwrap();
 
     stdout.queue(MoveTo(0, 2)).unwrap();
-    stdout.write(win.scheme.borders.repr.as_bytes()).unwrap();
+    stdout.write(win.scheme.border_color.repr.as_bytes()).unwrap();
     stdout.write(("└".to_string() + fill_all_block.as_str() + "┘").as_bytes()).unwrap();
     stdout.write(NOCOLOR).unwrap();
 }
@@ -59,41 +59,45 @@ fn print_menu(win: &Window) {
     let stdout = unsafe { &mut (*win.writer) };
 
     stdout.queue(MoveTo(0, 3)).unwrap();
-    stdout.write(win.scheme.background.repr.as_bytes()).unwrap();
-    stdout.write(win.scheme.borders.repr.as_bytes()).unwrap();
+    stdout.write(win.scheme.background_color.repr.as_bytes()).unwrap();
+    stdout.write(win.scheme.border_color.repr.as_bytes()).unwrap();
     stdout.write(("┌".to_string() + fill_all_block.as_str() + "┐").as_bytes()).unwrap();
 
     for i in 4..win.height {
         stdout.queue(MoveTo(0, i)).unwrap();
         stdout.queue(terminal::Clear(ClearType::CurrentLine)).unwrap();
-        stdout.write(win.scheme.borders.repr.as_bytes()).unwrap();
+        stdout.write(win.scheme.border_color.repr.as_bytes()).unwrap();
         stdout.write("│".as_bytes()).unwrap();
 
         if win.get_current().content.len() > (i - 4 + win.scroll_y).into() {
             let entry = &win.get_current().content[usize::from(i - 4 + win.scroll_y)];
             let _ = match entry {
                 Entry::File(file_name) => {
-                    stdout.write(win.scheme.text.repr.as_bytes()).unwrap();
-                    stdout.write("--- ".as_bytes()).unwrap();
-                    stdout.write(win.scheme.text.repr.as_bytes()).unwrap();
+                    stdout.write(NOCOLOR).unwrap();
+                    stdout.write(win.scheme.file_bullet_color.repr.as_bytes()).unwrap();
+                    stdout.write(win.scheme.file_bullet.as_bytes()).unwrap();
+                    stdout.write(NOCOLOR).unwrap();
+                    stdout.write(win.scheme.text_color.repr.as_bytes()).unwrap();
                     stdout.write(file_name.as_bytes()).unwrap()
                 },
                 Entry::Folder(folder) => {
-                    stdout.write(win.scheme.text.repr.as_bytes()).unwrap();
-                    stdout.write("[+] ".as_bytes()).unwrap();
-                    stdout.write(win.scheme.text.repr.as_bytes()).unwrap();
+                    stdout.write(NOCOLOR).unwrap();
+                    stdout.write(win.scheme.folder_bullet_color.repr.as_bytes()).unwrap();
+                    stdout.write(win.scheme.folder_bullet.as_bytes()).unwrap();
+                    stdout.write(NOCOLOR).unwrap();
+                    stdout.write(win.scheme.text_color.repr.as_bytes()).unwrap();
                     stdout.write(folder.name.as_bytes()).unwrap()
                 },
             };
         }
 
         stdout.queue(MoveTo(win.width - 1, i)).unwrap();
-        stdout.write(win.scheme.borders.repr.as_bytes()).unwrap();
+        stdout.write(win.scheme.border_color.repr.as_bytes()).unwrap();
         stdout.write("│".as_bytes()).unwrap();
     }
 
     stdout.queue(MoveTo(0, win.height - 1)).unwrap();
-    stdout.write(win.scheme.borders.repr.as_bytes()).unwrap();
+    stdout.write(win.scheme.border_color.repr.as_bytes()).unwrap();
     stdout.write(("└".to_string() + fill_all_block.as_str() + "┘").as_bytes()).unwrap();
     stdout.write(NOCOLOR).unwrap();
 }
