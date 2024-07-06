@@ -103,13 +103,14 @@ fn print_menu(win: &Window) {
     stdout.write(NOCOLOR).unwrap();
 }
 
-fn show_dialog(win: &mut Window, text: String) {
+fn show_dialog_raw(win: &mut Window, text: String, helper: Option<&str>) {
     let stdout = unsafe { &mut (*win.writer) };
 
     let lines_iter = text.split("\n");
     let mut lines = vec![];
     let mut max_length = 0;
 
+    'scanner:
     for line in lines_iter {
         if line.len() > usize::from(win.width - 8) {
             max_length = win.width - 8;
@@ -117,20 +118,54 @@ fn show_dialog(win: &mut Window, text: String) {
             loop {
                 if line.len() < usize::from(max_length) + index {
                     lines.push(&line[index..]);
-                    break;
+                    continue 'scanner;
                 }
 
                 lines.push(&line[index..index + usize::from(max_length)]);
                 index += usize::from(max_length);
             }
-        } else if line.len() > usize::from(max_length) {
+        } 
+
+        if line.len() > usize::from(max_length) {
             max_length = line.len() as u16;
-            lines.push(line);
+        }
+        lines.push(line);
+    }
+
+    let mut helper_label = vec![];
+
+    if let Some(label) = helper {
+        'scanner:
+        for line in label.split('\n') {
+            if line.len() > usize::from(win.width - 8) {
+                max_length = win.width - 8;
+                let mut index: usize = 0;
+                loop {
+                    if line.len() < usize::from(max_length) + index {
+                        helper_label.push(&line[index..]);
+                        continue 'scanner;
+                    }
+
+                    helper_label.push(&line[index..index + usize::from(max_length)]);
+                    index += usize::from(max_length);
+                }
+            } 
+
+            if line.len() > usize::from(max_length) {
+                max_length = line.len() as u16;
+            }
+            helper_label.push(line);
         }
     }
 
+    let helper_label_increment = if helper_label.len() < 2 {
+        0
+    } else {
+        helper_label.len() - 1
+    };
+
     let x: u16 = win.width / 2 - (max_length + 2) / 2;
-    let y: u16 = win.height / 2 - (lines.len() + 2) as u16 / 2;
+    let y: u16 = win.height / 2 - (lines.len() + helper_label_increment + 2) as u16 / 2;
 
     let fill_all_block = "─".repeat(usize::from(max_length));
 
@@ -148,51 +183,58 @@ fn show_dialog(win: &mut Window, text: String) {
     }
 
     stdout.queue(MoveTo(x, y + 1 + lines.len() as u16)).unwrap();
-    stdout.write("└".as_bytes()).unwrap();
-    stdout.write(fill_all_block.as_bytes()).unwrap();
-    stdout.write("┘".as_bytes()).unwrap();
+    if helper_label.len() < 2 {
+        stdout.write("└".as_bytes()).unwrap();
+        stdout.write(fill_all_block.as_bytes()).unwrap();
+        stdout.write("┘".as_bytes()).unwrap();
+
+        if helper_label.len() == 1 {
+            stdout.queue(MoveTo(x + max_length / 2 - helper_label[0].len() as u16 / 2 + 1, y + 1 + lines.len() as u16)).unwrap();
+            stdout.write(helper_label[0].as_bytes()).unwrap();
+        }
+    } else {
+        stdout.write("├".as_bytes()).unwrap();
+        stdout.write(fill_all_block.as_bytes()).unwrap();
+        stdout.write("┤".as_bytes()).unwrap();
+
+        stdout.queue(MoveTo(x, y + helper_label.len() as u16 + lines.len() as u16)).unwrap();
+        stdout.write("└".as_bytes()).unwrap();
+        stdout.write(fill_all_block.as_bytes()).unwrap();
+        stdout.write("┘".as_bytes()).unwrap();
+
+        for (index, label) in helper_label.iter().enumerate() {
+            if index != 0 && index != helper_label.len() - 1 {
+                stdout.queue(MoveTo(x, y + 1 + lines.len() as u16 + index as u16)).unwrap();
+                stdout.write("│".as_bytes()).unwrap();
+            }
+
+            stdout.queue(MoveTo(x + max_length / 2 - label.len() as u16 / 2 + 1, y + 1 + lines.len() as u16 + index as u16)).unwrap();
+            stdout.write(label.as_bytes()).unwrap();
+
+            if index != 0 && index != helper_label.len() - 1 {
+                stdout.queue(MoveTo(x + max_length + 1, y + 1 + lines.len() as u16 + index as u16)).unwrap();
+                stdout.write("│".as_bytes()).unwrap();
+            }
+        }
+    }
 
     win.on_dialog = true;
 
-    stdout.queue(MoveTo(win.width / 2, win.height / 2)).unwrap();
+    if helper_label.len() == 0 {
+        stdout.queue(MoveTo(win.width / 2, win.height / 2)).unwrap();
+    } else {
+        stdout.queue(MoveTo(x + max_length / 2 + 1, y + (lines.len() + helper_label.len() / 2) as u16 + 1)).unwrap();
+    }
 }
 
-const HELP_ANSWER_LABEL: &str = "y(es),n(o)";
+fn show_dialog(win: &mut Window, text: String) {
+    show_dialog_raw(win, text, None);
+} 
 
-fn show_confirm_dialog<T: Handler + 'static>(win: &mut Window, label: String, handler: T) {
-    let stdout = unsafe { &mut (*win.writer) };
+const HELP_ANSWER_LABEL: &str = "\ny(es),n(o)\n";
 
-    let max = if label.len() < 10 {
-        HELP_ANSWER_LABEL.len()
-    } else {
-        label.len()
-    };
-
-    let x: u16 = win.width / 2 - max as u16 / 2;
-    let y: u16 = win.height / 2 - 1;
-
-    let fill_all_block = "─".repeat(label.len());
-
-    stdout.queue(MoveTo(x, y)).unwrap();
-    stdout.write("┌".as_bytes()).unwrap();
-    stdout.write(fill_all_block.as_bytes()).unwrap();
-    stdout.write("┐".as_bytes()).unwrap();
-
-    stdout.queue(MoveTo(x, y + 1)).unwrap();
-    stdout.write("│".as_bytes()).unwrap();
-    stdout.write(label.as_bytes()).unwrap();
-    stdout.write("│".as_bytes()).unwrap();
-
-    stdout.queue(MoveTo(x, y + 2)).unwrap();
-    stdout.write("└".as_bytes()).unwrap();
-    stdout.write(fill_all_block.as_bytes()).unwrap();
-    stdout.write("┘".as_bytes()).unwrap();
-    stdout.queue(MoveTo(x + (max / 2) as u16 - (HELP_ANSWER_LABEL.len() / 2) as u16, y + 2)).unwrap();
-    stdout.write(HELP_ANSWER_LABEL.as_bytes()).unwrap();
-
-    win.on_dialog = true;
-
-    stdout.queue(MoveTo(win.width / 2, win.height / 2)).unwrap();
+fn show_confirm_dialog<T: Handler + 'static>(win: &mut Window, quest: String, handler: T) {
+    show_dialog_raw(win, quest, Some(HELP_ANSWER_LABEL));
     win.handler = Some(Box::new(handler));
 }
 
@@ -301,7 +343,7 @@ fn open_file(win: &mut Window, file_name: String) {
                 open_editor(win, data.1.clone());
             }
         }, (file_name, file, tmp_dir));
-        show_confirm_dialog(win, String::from("File already extracted, pressent on cache, extract it again?"), job);
+        show_confirm_dialog(win, String::from("File already extracted, pressent on cache.\nExtract it again?"), job);
         return;
     }
 
@@ -352,11 +394,12 @@ fn main() {
                         KeyCode::Down => win.move_down(),
                         KeyCode::Right => win.move_right(),
                         KeyCode::Left => win.move_left(),
-                        KeyCode::Char('t') => show_dialog(&mut win, ("Hello".repeat(20) + "\n").repeat(3)),
+                        // KeyCode::Char('t') => {
+                        //     show_dialog_raw(&mut win, String::from("Hello"), Some(HELP_ANSWER_LABEL));
+                        // },
                         KeyCode::Char('p') => {
                             let path = win.plain_current();
                             show_dialog(&mut win, path);
-                            continue 'mainLoop;
                         },
                         KeyCode::Char('o') => {
                             if usize::from(win.cursor.y - 4 + win.scroll_y) < win.get_current().content.len() {
