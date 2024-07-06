@@ -5,12 +5,10 @@ pub fn load() -> Config {
     let mut config_path = home_dir().unwrap();
     config_path.push(".config/content-7z.toml");
 
-    let mut settings = Config::default();
-    if !config_path.exists() {
-        return settings
+    let mut settings_builder = Config::builder();
+    if config_path.exists() {
+        settings_builder = settings_builder.add_source(File::from(config_path).format(FileFormat::Toml));
     }
 
-    settings.merge(File::from(config_path).format(FileFormat::Toml)).unwrap();
-
-    settings
+    settings_builder.build().unwrap()
 }
