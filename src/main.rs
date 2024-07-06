@@ -20,6 +20,7 @@ use content_7z::{
 };
 
 use content_7z::zip_manager::manager::ZipManager;
+use std::path::PathBuf;
 
 fn print_header(win: &Window) {
     let fill_all_block = "─".repeat(usize::from(win.width) - 2);
@@ -188,9 +189,7 @@ fn get_temp_dir(win: &mut Window) -> String {
     win.tmp_dir.clone() + "/" + win.get_path().as_str()
 }
 
-fn open_file(win: &mut Window, file_name: String) {
-    // Getting the tmp dir for this session
-    let tmp_dir = get_temp_dir(win);
+fn open_editor(win: &mut Window, file: PathBuf) {
     let stdout = unsafe {
         &mut (*win.writer)
     };
@@ -198,7 +197,50 @@ fn open_file(win: &mut Window, file_name: String) {
     stdout.queue(Clear(ClearType::Purge)).unwrap();
     stdout.flush().unwrap();
 
-    let path = if let Some(path) = file_name.rfind("/") {
+    let editor = if win.scheme.editor != "" {
+        win.scheme.editor.clone()
+    } else if let Ok(editor) = env::var("EDITOR") {
+        editor
+    } else {
+        String::from("editor")
+    };
+
+    // Opening tmp_dir + path
+    let status = Command::new(editor)
+        .arg(file.to_str().unwrap())
+        .status()
+        .expect("Couldnt open the editor");
+
+    if status.code().expect("Cannot stablish connection with the editor") != 0 {
+        // TODO
+    }
+
+    let stdout = unsafe {
+        &mut (*win.writer)
+    };
+
+    win.open_window();
+    stdout.queue(Clear(ClearType::Purge)).unwrap();
+    stdout.flush().unwrap();
+
+    print_menu(win);
+    print_header(win);
+
+    stdout.queue(MoveTo(win.cursor.x, win.cursor.y)).unwrap();
+    stdout.flush().unwrap();
+}
+
+fn open_file(win: &mut Window, file_name: String) {
+    // Getting the tmp dir for this session
+    let tmp_dir = get_temp_dir(win);
+    // Getting a file refence
+    let file = PathBuf::from(tmp_dir.clone() + "/" + file_name.as_str());
+    if file.exists() {
+        open_editor(win, file);
+        return;
+    }
+
+     let path = if let Some(path) = file_name.rfind("/") {
         vec![&file_name[..path + 1], &file_name[path + 1..]]
     } else {
         vec!["/", file_name.as_str()]
@@ -211,11 +253,6 @@ fn open_file(win: &mut Window, file_name: String) {
         .status().expect("Cannot communicate with the terminal");
 
     if mkdir_status.code().expect("Cannot communicate with the 'mkdir' command") != 0 {
-        print_menu(win);
-        print_header(win);
-
-        stdout.queue(MoveTo(win.cursor.x, win.cursor.y)).unwrap();
-        stdout.flush().unwrap();
         // TODO
         return;
     }
@@ -227,42 +264,11 @@ fn open_file(win: &mut Window, file_name: String) {
         .status().expect("Cannot execute the extractor.");
 
     if extract_status.code().expect("Cannot extract the file from the compress file.") != 0 {
-        print_menu(win);
-        print_header(win);
-
-        stdout.queue(MoveTo(win.cursor.x, win.cursor.y)).unwrap();
-        stdout.flush().unwrap();
         // TODO
         return
     }
 
-    let editor = if win.scheme.editor != "" {
-        win.scheme.editor.clone()
-    } else if let Ok(editor) = env::var("EDITOR") {
-        editor
-    } else {
-        String::from("editor")
-    };
-
-    // Opening tmp_dir + path
-    let status = Command::new(editor)
-        .arg(tmp_dir + "/" + file_name.as_str())
-        .status()
-        .expect("Couldnt open the editor");
-
-    if status.code().expect("Cannot stablish connection with the editor") != 0 {
-        // TODO
-    }
-
-    win.open_window();
-    stdout.queue(Clear(ClearType::Purge)).unwrap();
-    stdout.flush().unwrap();
-
-    print_menu(win);
-    print_header(win);
-
-    stdout.queue(MoveTo(win.cursor.x, win.cursor.y)).unwrap();
-    stdout.flush().unwrap();
+    open_editor(win, file);
 } 
 
 fn main() {
