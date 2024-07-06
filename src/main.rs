@@ -222,17 +222,8 @@ fn open_editor(win: &mut Window, file: PathBuf) {
     stdout.flush().unwrap();
 }
 
-fn open_file(win: &mut Window, file_name: String) {
-    // Getting the tmp dir for this session
-    let tmp_dir = get_temp_dir(win);
-    // Getting a file refence
-    let file = PathBuf::from(tmp_dir.clone() + "/" + file_name.as_str());
-    if file.exists() {
-        open_editor(win, file);
-        return;
-    }
-
-     let path = if let Some(path) = file_name.rfind("/") {
+fn extract_an_open_file(win: &mut Window, tmp_dir: String, file_name: String, file: PathBuf, overwrite: bool) {
+    let path = if let Some(path) = file_name.rfind("/") {
         vec![&file_name[..path + 1], &file_name[path + 1..]]
     } else {
         vec!["/", file_name.as_str()]
@@ -250,8 +241,15 @@ fn open_file(win: &mut Window, file_name: String) {
     }
 
     // Extracting the file to: tmp_dir + path[0]
+    let win_path = win.get_path();
+    let output_path = format!("-o{}/{}", tmp_dir, path[0]);
+
+    let mut extractor_args = vec!["e", win_path.as_str(), &file_name[1..], output_path.as_str()];
+    if overwrite {
+        extractor_args.push("-y");
+    }
     let extract_status = Command::new("7z")
-        .args(["e", win.get_path().as_str(), &file_name[1..], format!("-o{}/{}", tmp_dir, path[0]).as_str()])
+        .args(extractor_args)
         .stdout(Stdio::null())
         .status().expect("Cannot execute the extractor.");
 
@@ -261,6 +259,26 @@ fn open_file(win: &mut Window, file_name: String) {
     }
 
     open_editor(win, file);
+}
+
+fn open_file(win: &mut Window, file_name: String) {
+    // Getting the tmp dir for this session
+    let tmp_dir = get_temp_dir(win);
+    // Getting a file refence
+    let file = PathBuf::from(tmp_dir.clone() + "/" + file_name.as_str());
+    if file.exists() {
+        let job = NormalHandler::new(|win, situation, data| {
+            if let HandleSituatonType::SUCESS = situation {
+                extract_an_open_file(win, data.2.clone(), data.0.clone(), data.1.clone(), true);
+            } else {
+                open_editor(win, data.1.clone());
+            }
+        }, (file_name, file, tmp_dir));
+        show_confirm_dialog(win, String::from("File already extracted, pressent on cache, extract it again?"), job);
+        return;
+    }
+
+    extract_an_open_file(win, tmp_dir, file_name, file, false);
 } 
 
 fn main() {
@@ -293,8 +311,9 @@ fn main() {
                     close_dialog(&mut win);
                     match key.code {
                         KeyCode::Char('y') => win.run_job(HandleSituatonType::SUCESS),
-                        KeyCode::Char('c') => win.run_job(HandleSituatonType::DENIED),
-                        _ => {}
+                        KeyCode::Char('n') => win.run_job(HandleSituatonType::DENIED),
+                        _ => win.run_job(HandleSituatonType::UNDECIDED),
+                    
                     }
                 }
                 break;
