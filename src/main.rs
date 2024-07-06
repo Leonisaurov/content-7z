@@ -103,24 +103,51 @@ fn print_menu(win: &Window) {
     stdout.write(NOCOLOR).unwrap();
 }
 
-fn show_dialog(win: &mut Window, label: String) {
+fn show_dialog(win: &mut Window, text: String) {
     let stdout = unsafe { &mut (*win.writer) };
-    let x: u16 = win.width / 2 - label.len() as u16 / 2;
-    let y: u16 = win.height / 2 - 1;
 
-    let fill_all_block = "─".repeat(label.len());
+    let lines_iter = text.split("\n");
+    let mut lines = vec![];
+    let mut max_length = 0;
+
+    for line in lines_iter {
+        if line.len() > usize::from(win.width - 8) {
+            max_length = win.width - 8;
+            let mut index: usize = 0;
+            loop {
+                if line.len() < usize::from(max_length) + index {
+                    lines.push(&line[index..]);
+                    break;
+                }
+
+                lines.push(&line[index..index + usize::from(max_length)]);
+                index += usize::from(max_length);
+            }
+        } else if line.len() > usize::from(max_length) {
+            max_length = line.len() as u16;
+            lines.push(line);
+        }
+    }
+
+    let x: u16 = win.width / 2 - (max_length + 2) / 2;
+    let y: u16 = win.height / 2 - (lines.len() + 2) as u16 / 2;
+
+    let fill_all_block = "─".repeat(usize::from(max_length));
 
     stdout.queue(MoveTo(x, y)).unwrap();
     stdout.write("┌".as_bytes()).unwrap();
     stdout.write(fill_all_block.as_bytes()).unwrap();
     stdout.write("┐".as_bytes()).unwrap();
 
-    stdout.queue(MoveTo(x, y + 1)).unwrap();
-    stdout.write("│".as_bytes()).unwrap();
-    stdout.write(label.as_bytes()).unwrap();
-    stdout.write("│".as_bytes()).unwrap();
+    for (index, line) in lines.iter().enumerate() {
+        stdout.queue(MoveTo(x, y + 1 + index as u16)).unwrap();
+        stdout.write("│".as_bytes()).unwrap();
+        stdout.write(line.as_bytes()).unwrap();
+        stdout.queue(MoveTo(x + max_length + 1, y + 1 + index as u16)).unwrap();
+        stdout.write("│".as_bytes()).unwrap();
+    }
 
-    stdout.queue(MoveTo(x, y + 2)).unwrap();
+    stdout.queue(MoveTo(x, y + 1 + lines.len() as u16)).unwrap();
     stdout.write("└".as_bytes()).unwrap();
     stdout.write(fill_all_block.as_bytes()).unwrap();
     stdout.write("┘".as_bytes()).unwrap();
@@ -313,7 +340,6 @@ fn main() {
                         KeyCode::Char('y') => win.run_job(HandleSituatonType::SUCESS),
                         KeyCode::Char('n') => win.run_job(HandleSituatonType::DENIED),
                         _ => win.run_job(HandleSituatonType::UNDECIDED),
-                    
                     }
                 }
                 break;
@@ -326,6 +352,7 @@ fn main() {
                         KeyCode::Down => win.move_down(),
                         KeyCode::Right => win.move_right(),
                         KeyCode::Left => win.move_left(),
+                        KeyCode::Char('t') => show_dialog(&mut win, ("Hello".repeat(20) + "\n").repeat(3)),
                         KeyCode::Char('p') => {
                             let path = win.plain_current();
                             show_dialog(&mut win, path);
