@@ -6,7 +6,7 @@ use crossterm::{
 
 use std::{
     time::Duration, io::{stdout, Write}, thread,
-    process::{exit, Command, Stdio},
+    process::{exit, Command, Stdio}, env,
 };
 
 use content_7z::{
