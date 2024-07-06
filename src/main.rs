@@ -238,6 +238,13 @@ fn show_multiple_choice_dialog<T: Handler + 'static>(win: &mut Window, quest: St
     win.handler = Some(Box::new(handler));
 }
 
+fn show_err_dialog(win: &mut Window, err: &str, exit: bool) {
+    show_dialog_raw(win, String::from(err), None);
+    if exit {
+        panic!("Error: {}", err);
+    }
+}
+
 fn close_dialog(win: &mut Window) {
     print_header(win);
     print_menu(win);
@@ -267,6 +274,11 @@ fn open_editor(win: &mut Window, file: PathBuf) {
     stdout.flush().unwrap();
 
     // Opening tmp_dir + path
+    if win.scheme.editor.is_empty() {
+        show_err_dialog(win, "Content-7z can not assumed any editor.\nDefine one in the config file:\n~/.config/content-7z.toml", false);
+        return;
+    }
+
     let status = Command::new(win.scheme.editor.clone())
         .arg(file.to_str().unwrap())
         .status()
@@ -398,9 +410,9 @@ fn main() {
                         KeyCode::Down => win.move_down(),
                         KeyCode::Right => win.move_right(),
                         KeyCode::Left => win.move_left(),
-                        // KeyCode::Char('t') => {
-                        //     show_dialog_raw(&mut win, String::from("Hello"), Some(HELP_ANSWER_LABEL));
-                        // },
+                        KeyCode::Char('t') => {
+                            show_err_dialog(&mut win, "Hello", true);
+                        },
                         KeyCode::Char('p') => {
                             let path = win.plain_current();
                             show_dialog(&mut win, path);

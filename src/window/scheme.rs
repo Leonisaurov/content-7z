@@ -1,5 +1,6 @@
 use config::Config;
 use std::env;
+use which::which;
 
 pub enum ColorType {
     FG,
@@ -161,11 +162,21 @@ impl Scheme {
         }
 
         if scheme.editor.is_empty() {
-            scheme.editor = if let Ok(editor) = env::var("EDITOR") {
-                editor
+            if let Ok(editor) = env::var("EDITOR") {
+                scheme.editor = editor;
             } else {
-                String::from("editor")
-            };
+                let identify_editor = vec!["nvim", "vim", "emacs", "nano", "micro"];
+                for editor in identify_editor {
+                    match which(editor) {
+                        Ok(path) => {
+                            scheme.editor = String::from(path.to_str().unwrap());
+                            break;
+                        },
+                        _ => {},
+                    }
+
+                }
+            }
         }
 
         if let Ok(state) = config.get_bool("always-overwrite") {

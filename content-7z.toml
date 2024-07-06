@@ -30,4 +30,7 @@
 # file-bullet = " \uea7b "
 # file-bullet-color = "38;2;88;88;88;1"
 
+# multi-choice-helper = "\ny(es) / (no)\n"
+
 # editor = ""
+# always-overwrite=false
