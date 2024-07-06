@@ -78,10 +78,15 @@ pub struct Scheme {
     pub background_color: Color,
     pub border_color: Color,
     pub text_color: Color,
+
     pub folder_bullet: String,
     pub folder_bullet_color: Color,
+
     pub file_bullet: String,
     pub file_bullet_color: Color,
+
+    pub multi_choice_dialog_helper: String,
+
     pub editor: String,
     pub always_overwrite: bool,
 }
@@ -92,10 +97,15 @@ impl Scheme {
             background_color: Color::new(0, 0, 0, ColorType::BG),
             border_color: Color::new(255, 255, 255, ColorType::FG),
             text_color: Color::new(200, 200, 200, ColorType::FG),
+
             folder_bullet: String::from("[+] "),
             folder_bullet_color: Color::new(200, 200, 200, ColorType::FG),
+
             file_bullet: String::from("--- "),
             file_bullet_color: Color::new(200, 200, 200, ColorType::FG),
+
+            multi_choice_dialog_helper: String::from("\ny(es) / n(o)\n"),
+
             editor: String::new(),
             always_overwrite: false,
         }
@@ -140,6 +150,10 @@ impl Scheme {
             scheme.file_bullet_color.change(Color::from(color, ColorType::FG));
         } else if let Ok(color) = config.get_string("file-bullet-color") {
             scheme.file_bullet_color.repr = format!("\x1b[{}m", color);
+        }
+
+        if let Ok(helper) = config.get_string("multi-choice-dialog-helper") {
+            scheme.multi_choice_dialog_helper = helper;
         }
 
         if let Ok(editor) = config.get_string("editor") {

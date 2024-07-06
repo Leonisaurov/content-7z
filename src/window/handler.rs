@@ -4,9 +4,9 @@ use std::cell::RefCell;
 use std::cell::RefMut;
 
 pub enum HandleSituatonType {
-    SUCESS,
+    SUCESS(bool),
     DENIED,
-    UNDECIDED,
+    KEY(char),
 }
 
 pub trait Handler {

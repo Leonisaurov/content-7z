@@ -231,10 +231,10 @@ fn show_dialog(win: &mut Window, text: String) {
     show_dialog_raw(win, text, None);
 } 
 
-const HELP_ANSWER_LABEL: &str = "\ny(es),n(o)\n";
+fn show_multiple_choice_dialog<T: Handler + 'static>(win: &mut Window, quest: String, handler: T) {
+    let helper = win.scheme.multi_choice_dialog_helper.clone();
+    show_dialog_raw(win, quest, Some(helper.as_str()));
 
-fn show_confirm_dialog<T: Handler + 'static>(win: &mut Window, quest: String, handler: T) {
-    show_dialog_raw(win, quest, Some(HELP_ANSWER_LABEL));
     win.handler = Some(Box::new(handler));
 }
 
@@ -337,13 +337,13 @@ fn open_file(win: &mut Window, file_name: String) {
     let file = PathBuf::from(tmp_dir.clone() + "/" + file_name.as_str());
     if !win.scheme.always_overwrite && file.exists() {
         let job = NormalHandler::new(|win, situation, data| {
-            if let HandleSituatonType::SUCESS = situation {
+            if let HandleSituatonType::SUCESS(_) = situation {
                 extract_an_open_file(win, data.2.clone(), data.0.clone(), data.1.clone(), true);
-            } else {
+            } else if let HandleSituatonType::DENIED = situation {
                 open_editor(win, data.1.clone());
             }
         }, (file_name, file, tmp_dir));
-        show_confirm_dialog(win, String::from("File already extracted, pressent on cache.\nExtract it again?"), job);
+        show_multiple_choice_dialog(win, String::from("File already extracted, pressent on cache.\nExtract it again?"), job);
         return;
     }
 
@@ -379,9 +379,13 @@ fn main() {
                 if let Event::Key(key) = event::read().unwrap() {
                     close_dialog(&mut win);
                     match key.code {
-                        KeyCode::Char('y') => win.run_job(HandleSituatonType::SUCESS),
+                        KeyCode::Char('y') => win.run_job(HandleSituatonType::SUCESS(true)),
+                        KeyCode::Enter => win.run_job(HandleSituatonType::SUCESS(false)),
+
                         KeyCode::Char('n') => win.run_job(HandleSituatonType::DENIED),
-                        _ => win.run_job(HandleSituatonType::UNDECIDED),
+
+                        KeyCode::Char(ch) => win.run_job(HandleSituatonType::KEY(ch)),
+                        _ => {},
                     }
                 }
                 break;
@@ -408,12 +412,14 @@ fn main() {
                                     let message = format!("Open '{}'?", path);
 
                                     let job = NormalHandler::new(|win, situation, file_name| {
-                                        if let HandleSituatonType::SUCESS = situation {
-                                            open_file(win, file_name.clone());
+                                        if let HandleSituatonType::SUCESS(direct) = situation {
+                                            if direct {
+                                                open_file(win, file_name.clone());
+                                            }
                                         }
                                     }, path);
 
-                                    show_confirm_dialog(&mut win, message, job);
+                                    show_multiple_choice_dialog(&mut win, message, job);
                                     continue 'mainLoop;
                                 }
                             }
