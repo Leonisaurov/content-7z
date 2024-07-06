@@ -321,8 +321,7 @@ fn main() {
             match event::read().unwrap() {
                 Event::Key(ev) => {
                     match ev.code {
-                        KeyCode::Esc => break 'mainLoop,
-                        KeyCode::Char('q') => break 'mainLoop,
+                        KeyCode::Esc | KeyCode::Char('q') => break 'mainLoop,
                         KeyCode::Up => win.move_up(),
                         KeyCode::Down => win.move_down(),
                         KeyCode::Right => win.move_right(),
