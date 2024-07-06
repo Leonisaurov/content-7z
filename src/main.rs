@@ -266,7 +266,7 @@ fn open_file(win: &mut Window, file_name: String) {
     let tmp_dir = get_temp_dir(win);
     // Getting a file refence
     let file = PathBuf::from(tmp_dir.clone() + "/" + file_name.as_str());
-    if file.exists() {
+    if !win.scheme.always_overwrite && file.exists() {
         let job = NormalHandler::new(|win, situation, data| {
             if let HandleSituatonType::SUCESS = situation {
                 extract_an_open_file(win, data.2.clone(), data.0.clone(), data.1.clone(), true);

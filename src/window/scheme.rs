@@ -83,6 +83,7 @@ pub struct Scheme {
     pub file_bullet: String,
     pub file_bullet_color: Color,
     pub editor: String,
+    pub always_overwrite: bool,
 }
 
 impl Scheme {
@@ -96,6 +97,7 @@ impl Scheme {
             file_bullet: String::from("--- "),
             file_bullet_color: Color::new(200, 200, 200, ColorType::FG),
             editor: String::new(),
+            always_overwrite: false,
         }
     }
 
@@ -150,6 +152,10 @@ impl Scheme {
             } else {
                 String::from("editor")
             };
+        }
+
+        if let Ok(state) = config.get_bool("always-overwrite") {
+            scheme.always_overwrite = state;
         }
 
         scheme
