@@ -1,31 +1,38 @@
 use crate::window::window::Window;
+use std::rc::Rc;
+use std::cell::RefCell;
+use std::cell::RefMut;
+
 pub enum HandleSituatonType {
     SUCESS,
-    DENIED
+    DENIED,
+    UNDECIDED,
 }
 
 pub trait Handler {
     fn execute(&self, win: &mut Window, hand_type: HandleSituatonType);
 }
 
-type Hand<T> = fn(&mut Window, HandleSituatonType, &Vec<T>);
+type NormalHand<T> = fn(&mut Window, HandleSituatonType, RefMut<T>);
 
 pub struct NormalHandler<T> {
-    job: Hand<T>,
-    data: Vec<T>
+    job: NormalHand<T>,
+    data: Rc<RefCell<T>>,
 }
 
 impl<T> NormalHandler<T> {
-    pub fn new(job: Hand<T>, data: Vec<T>) -> Self {
+    pub fn new(job: NormalHand<T>, data: T) -> Self {
         Self {
             job,
-            data
+            data: Rc::new(
+                RefCell::new(data)
+            ),
         }
     }
 }
 
 impl<T> Handler for NormalHandler<T> {
     fn execute(&self, win: &mut Window, hand_type: HandleSituatonType) {
-        (self.job)(win, hand_type, &self.data)
+        (self.job)(win, hand_type, self.data.borrow_mut())
     }
 }
