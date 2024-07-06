@@ -338,11 +338,11 @@ fn main() {
                                     let path = win.plain_current() + "/" + file_name;
                                     let message = format!("Open '{}'?", path);
 
-                                    let job = NormalHandler::new(|win, situation, data| {
+                                    let job = NormalHandler::new(|win, situation, file_name| {
                                         if let HandleSituatonType::SUCESS = situation {
-                                            open_file(win, data[0].clone());
+                                            open_file(win, file_name.clone());
                                         }
-                                    }, vec![path]);
+                                    }, path);
 
                                     show_confirm_dialog(&mut win, message, job);
                                     continue 'mainLoop;
