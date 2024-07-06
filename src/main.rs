@@ -6,7 +6,7 @@ use crossterm::{
 
 use std::{
     time::Duration, io::{stdout, Write}, thread,
-    process::{exit, Command, Stdio}, env,
+    process::{exit, Command, Stdio},
 };
 
 use content_7z::{
@@ -197,16 +197,8 @@ fn open_editor(win: &mut Window, file: PathBuf) {
     stdout.queue(Clear(ClearType::Purge)).unwrap();
     stdout.flush().unwrap();
 
-    let editor = if win.scheme.editor != "" {
-        win.scheme.editor.clone()
-    } else if let Ok(editor) = env::var("EDITOR") {
-        editor
-    } else {
-        String::from("editor")
-    };
-
     // Opening tmp_dir + path
-    let status = Command::new(editor)
+    let status = Command::new(win.scheme.editor.clone())
         .arg(file.to_str().unwrap())
         .status()
         .expect("Couldnt open the editor");

@@ -1,4 +1,5 @@
 use config::Config;
+use std::env;
 
 pub enum ColorType {
     FG,
@@ -140,7 +141,15 @@ impl Scheme {
         }
 
         if let Ok(editor) = config.get_string("editor") {
-            scheme.editor = editor;
+            scheme.editor = String::from(editor.trim());
+        }
+
+        if scheme.editor.is_empty() {
+            scheme.editor = if let Ok(editor) = env::var("EDITOR") {
+                editor
+            } else {
+                String::from("editor")
+            };
         }
 
         scheme
