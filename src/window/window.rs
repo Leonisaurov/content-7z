@@ -7,7 +7,10 @@ use crate::{
     },
     zip_manager::manager
 };
-use std::io::{StdoutLock, Write};
+use std::{
+    io::{StdoutLock, Write},
+    fs::remove_dir_all
+};
 use crossterm::{terminal, QueueableCommand};
 use config::Config;
 
@@ -37,6 +40,11 @@ impl<'a> Drop for Window<'a> {
         }
 
         self.handler.take();
+        if self.tmp_dir != "" {
+            if let Err(_) = remove_dir_all(self.tmp_dir.clone()) {
+                // TODO
+            }
+        }
     }
 }
 
