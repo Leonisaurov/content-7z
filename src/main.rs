@@ -75,17 +75,21 @@ fn print_menu(win: &Window) {
             let _ = match entry {
                 Entry::File(file_name) => {
                     stdout.write(NOCOLOR).unwrap();
+                    stdout.write(win.scheme.background_color.repr.as_bytes()).unwrap();
                     stdout.write(win.scheme.file_bullet_color.repr.as_bytes()).unwrap();
                     stdout.write(win.scheme.file_bullet.as_bytes()).unwrap();
                     stdout.write(NOCOLOR).unwrap();
+                    stdout.write(win.scheme.background_color.repr.as_bytes()).unwrap();
                     stdout.write(win.scheme.text_color.repr.as_bytes()).unwrap();
                     stdout.write(file_name.as_bytes()).unwrap()
                 },
                 Entry::Folder(folder) => {
                     stdout.write(NOCOLOR).unwrap();
+                    stdout.write(win.scheme.background_color.repr.as_bytes()).unwrap();
                     stdout.write(win.scheme.folder_bullet_color.repr.as_bytes()).unwrap();
                     stdout.write(win.scheme.folder_bullet.as_bytes()).unwrap();
                     stdout.write(NOCOLOR).unwrap();
+                    stdout.write(win.scheme.background_color.repr.as_bytes()).unwrap();
                     stdout.write(win.scheme.text_color.repr.as_bytes()).unwrap();
                     stdout.write(folder.name.as_bytes()).unwrap()
                 },
