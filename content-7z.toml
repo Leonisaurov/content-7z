@@ -9,7 +9,10 @@
 #| Tokio Dark
 # background-color = [17, 18, 29]
 # text-color = [160, 168, 205]
-# border-color = [74, 80, 87]
+# border-color = [26, 27, 42]
+
+# folder-bullet-color = "1;38;2;113;153;238"
+# file-bullet-color = "38;2;238;109;133;1"
 
 #| Rose pine
 # text-color = [224, 222, 244]
@@ -24,10 +27,13 @@
 # folder-bullet-color = "1;38;2;156;207;216"
 # file-bullet-color = "38;2;196;167;216;1"
 
-#| Github Default
-# text-color = [230, 237, 243]
-# background-color = [13, 17, 23]
-# border-color = [110, 118, 129]
+#| Dracula
+# text-color = [248, 248, 242]
+# background-color = [40, 42, 54]
+# border-color = [98, 114, 164]
+
+# folder-bullet-color = "1;38;2;139;233;253"
+# file-bullet-color = "38;2;255;121;198;1"
 
 #| Lunaperche
 # text-color = [198, 198, 198]
