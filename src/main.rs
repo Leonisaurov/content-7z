@@ -451,6 +451,13 @@ fn main() {
                         _ => {}
                     }
                 },
+                Event::Resize(width, height) => {
+                    win.set_size(width, height);
+
+                    win.scroll_change = true;
+                    win.path_change = true;
+                    win.cursor.need_update = true;
+                },
                 _ => {}
             }
         }

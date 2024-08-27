@@ -186,6 +186,11 @@ impl<'a> Window<'a> {
         self.cursor.need_update = true;
     }
 
+    pub fn set_size(&mut self, x: u16, y: u16) {
+        self.width = x;
+        self.height = y;
+    }
+
     pub fn set_scheme(&mut self, scheme: Scheme) {
         self.scheme = scheme
     }
