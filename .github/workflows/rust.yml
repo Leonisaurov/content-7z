@@ -22,9 +22,11 @@ jobs:
         - target: x86_64-apple-darwin
           archive: zip
     steps:
-      - name: clone
-        uses: actions/checkout@v4
-      - name: preview
-        run: ls
+      - uses: actions/checkout@v4
       - name: build
         run: cargo build --release
+      - uses: Shopify/upload-to-release@v1
+        with:
+          name: Content-7zArt
+          path: target/release/content-7z
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
