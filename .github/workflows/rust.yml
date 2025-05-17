@@ -29,4 +29,4 @@ jobs:
         with:
           name: Content-7zArt
           path: target/release/content-7z
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          repo-token: ${{ secrets.GIT_TOKEN }}
