@@ -26,6 +26,7 @@ jobs:
       - name: build
         run: cargo build --release
       - uses: Shopify/upload-to-release@v2.0.0
+        id: create_release
         with:
           name: Content-7zArt
           path: target/release/content-7z
