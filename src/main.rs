@@ -369,7 +369,7 @@ fn open_file(win: &mut Window, file_name: String) {
 fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        eprintln!("Usage:\n\t{} {{7zip file}}", &args[0]);
+        eprintln!("Usage:\n\t{} {{Compress file}}", &args[0]);
         exit(-1);
     }
 
