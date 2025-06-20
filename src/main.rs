@@ -490,6 +490,7 @@ fn main() {
                             }
                         }
                         KeyCode::Backspace => win.back_current(),
+                        KeyCode::Char('-') => win.back_current(),
                         KeyCode::Enter => {
                             if usize::from(win.cursor.y - 4 + win.scroll_y) < win.get_current().content.len() {
                                 if let Entry::Folder(dir) = &win.get_current().content[usize::from(win.cursor.y - 4 + win.scroll_y)] {
