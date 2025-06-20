@@ -1,7 +1,5 @@
 use crossterm::{
-    self, terminal::{self, Clear, ClearType}, cursor::MoveTo,
-    QueueableCommand,
-    event::{self, Event, KeyCode}
+    self, cursor::MoveTo, event::{self, Event, KeyCode}, terminal::{self, Clear, ClearType}, QueueableCommand
 };
 
 use std::{
@@ -327,16 +325,33 @@ fn extract_an_open_file(win: &mut Window, tmp_dir: String, file_name: String, fi
 
     // Extracting the file to: tmp_dir + path[0]
     let win_path = win.get_path();
-    let output_path = format!("-o{}/{}", tmp_dir, path[0]);
 
-    let mut extractor_args = vec!["e", win_path.as_str(), &file_name[1..], output_path.as_str()];
-    if overwrite {
-        extractor_args.push("-y");
-    }
-    let extract_status = Command::new("7z")
-        .args(extractor_args)
-        .stdout(Stdio::null())
-        .status().expect("Cannot execute the extractor.");
+    let extract_status = match win_path.as_str() {
+        s if s.ends_with(".tar.gz") => {
+            let output_path = format!("{}/{}", tmp_dir, path[0]);
+            let mut extractor_args = vec!["-xzf", win_path.as_str(), "-C", output_path.as_str(), &file_name[1..]];
+            if !overwrite {
+                extractor_args.push("--keep-old-files");
+            }
+
+            Command::new("tar")
+                .args(extractor_args)
+                .stdout(Stdio::null())
+                .status().expect("Cannot execute the extractor")
+        },
+        s => {
+            let output_path = format!("-o{}/{}", tmp_dir, path[0]);
+            let mut extractor_args = vec!["e", win_path.as_str(), &file_name[1..], output_path.as_str()];
+            if overwrite {
+                extractor_args.push("-y");
+            }
+
+            Command::new("7z")
+            .args(extractor_args)
+            .stdout(Stdio::null())
+            .status().expect("Cannot execute the extractor.")
+        },
+    };
 
     if extract_status.code().expect("Cannot extract the file from the compress file.") != 0 {
         // TODO
