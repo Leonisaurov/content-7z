@@ -24,9 +24,13 @@ impl ZipManager {
             return Self::process_tar(file_name)
         }
 
-        let password_field = password.unwrap_or("");
+        let mut args = vec!["l", file_name];
+        if let Some(password) = password {
+            args.push(password);
+        }
+
         let res = Command::new("7z")
-            .args(vec!["l", file_name, password_field])
+            .args(args)
             .output();
 
         match res {

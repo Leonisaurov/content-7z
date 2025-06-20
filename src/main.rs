@@ -355,10 +355,13 @@ fn extract_an_open_file(win: &mut Window, tmp_dir: String, file_name: String, fi
         },
         _ => {
             let output_path = format!("-o{}/{}", tmp_dir, path[0]);
-            let password_fild = win.get_file_password().unwrap_or(String::from("-p"));
-            let mut extractor_args = vec!["e", win_path.as_str(), &file_name[1..], output_path.as_str(), password_fild.as_str()];
+            let mut extractor_args: Vec<String> = vec!["e".to_string(), win_path, file_name[1..].to_string(), output_path];
             if overwrite {
-                extractor_args.push("-y");
+                extractor_args.push("-y".to_string());
+            }
+
+            if let Some(password) = win.get_file_password() {
+                extractor_args.push(password);
             }
 
             Command::new("7z")
