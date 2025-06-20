@@ -1,4 +1,4 @@
-use std::process::Command;
+use std::{io::{BufReader, Read, Write}, process::{Command, Stdio}};
 
 use crate::files::{
     folder::Folder,
@@ -19,14 +19,16 @@ pub struct ZipManager {
 }
 
 impl ZipManager {
-    pub fn process(file_name: &str) -> Self {
+    pub fn process(file_name: &str, password: Option<&str>) -> Self {
         if file_name.ends_with(".tar.gz") {
             return Self::process_tar(file_name)
         }
 
+        let password_field = password.unwrap_or("");
         let res = Command::new("7z")
-            .args(vec!["l", file_name])
+            .args(vec!["l", file_name, password_field])
             .output();
+
         match res {
             Err(_) => Self {
                 t: ZipManagerType::P7ZIP,
@@ -75,6 +77,47 @@ impl ZipManager {
                 }
             },
         }
+    }
+
+    pub fn need_password(file_name: &str) -> bool {
+        let mut command = Command::new("7z")
+            .args(vec!["t", file_name])
+            .stdout(Stdio::piped())
+            .stdin(Stdio::piped())
+            .stderr(Stdio::null())
+            .spawn().unwrap();
+
+        let stdout = command.stdout.take().unwrap();
+        let stdin = command.stdin.as_mut().unwrap();
+        let mut reader = BufReader::new(stdout);
+
+        let pattern = "Enter password:";
+        let mut buffer = vec![];
+
+        loop {
+            let mut byte = [0; 1];
+            match reader.read(&mut byte) {
+                Ok(0) => break,
+                Ok(_) => {
+                    buffer.push(byte[0]);
+                    let output = String::from_utf8_lossy(&buffer);
+                    if output.ends_with("\n") {
+                        buffer = vec![];
+                    } else if output == pattern {
+                        let _ = writeln!(stdin, "");
+                        command.kill().unwrap();
+                        return true
+                    }
+                },
+                Err(e) => {
+                    eprintln!("Commando Output Reading Error: {}", e);
+                    break
+                },
+            }
+        }
+
+        let _ = command.wait().unwrap();
+        return false
     }
 
     pub fn get_root(&self) -> Folder {

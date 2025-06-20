@@ -16,6 +16,7 @@ use config::Config;
 
 pub struct Window<'a> {
     pub root: Folder,
+    file_password: Option<String>,
     pub current: Vec<Folder>,
     pub width: u16,
     pub height: u16,
@@ -49,11 +50,16 @@ impl<'a> Drop for Window<'a> {
 }
 
 impl<'a> Window<'a> {
-    pub fn new(stdout: *mut StdoutLock<'a>, config: Config) -> Self {
+    pub fn new(stdout: *mut StdoutLock<'a>, config: Config, file_password: Option<&str>) -> Self {
         let (width, height) = terminal::size().unwrap();
 
         let mut window = Self {
             root: Folder::new(""),
+            file_password: if let Some(password) = file_password {
+                Some(password.to_string())
+            } else {
+                None
+            },
             current: vec![],
             width, 
             height,
@@ -71,6 +77,10 @@ impl<'a> Window<'a> {
         };
         window.open_window();
         window
+    }
+
+    pub fn get_file_password(&self) -> Option<String> {
+        self.file_password.clone()
     }
 
     pub fn open_window(&mut self) {

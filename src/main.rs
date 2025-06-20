@@ -3,8 +3,7 @@ use crossterm::{
 };
 
 use std::{
-    time::Duration, io::{stdout, Write}, thread,
-    process::{exit, Command, Stdio}, env,
+    env, fmt::{self}, io::{stdout, Write}, process::{exit, Command, Stdio}, thread, time::Duration
 };
 
 use content_7z::{
@@ -19,6 +18,21 @@ use content_7z::{
 
 use content_7z::zip_manager::manager::ZipManager;
 use std::path::PathBuf;
+
+enum Color {
+    RED,
+    REMOVE
+}
+
+impl fmt::Display for Color {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            Color::RED => "\x1b[31m",
+            Color::REMOVE => "\x1b[0m",
+        };
+        write!(f, "{}", s)
+    }
+}
 
 fn print_header(win: &Window) {
     let fill_all_block = "─".repeat(usize::from(win.width) - 2);
@@ -339,9 +353,10 @@ fn extract_an_open_file(win: &mut Window, tmp_dir: String, file_name: String, fi
                 .stdout(Stdio::null())
                 .status().expect("Cannot execute the extractor")
         },
-        s => {
+        _ => {
             let output_path = format!("-o{}/{}", tmp_dir, path[0]);
-            let mut extractor_args = vec!["e", win_path.as_str(), &file_name[1..], output_path.as_str()];
+            let password_fild = win.get_file_password().unwrap_or(String::from("-p"));
+            let mut extractor_args = vec!["e", win_path.as_str(), &file_name[1..], output_path.as_str(), password_fild.as_str()];
             if overwrite {
                 extractor_args.push("-y");
             }
@@ -383,19 +398,38 @@ fn open_file(win: &mut Window, file_name: String) {
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    if args.len() != 2 {
-        eprintln!("Usage:\n\t{} {{Compress file}}", &args[0]);
+    if args.len() < 2 || args.len() > 3 {
+        eprintln!("Usage:\n\t{} {{Compress file}} -p[password]", &args[0]);
+        exit(-1);
+    }
+
+    let need_password = ZipManager::need_password(&args[1]);
+    let password = if need_password {
+        if args.len() != 3 {
+            eprintln!("No password gived, the file '{}' need one to view the content.", &args[1]);
+            exit(-2);
+        }
+        let password = &args[2];
+        if !password.starts_with("-p") {
+            eprintln!("Unknown argument '{}'", password);
+            exit(-2);
+        }
+        Some(args[2].as_str())
+    } else {
+        None
+    };
+
+    let manager = ZipManager::process(&args[1], password);
+    if manager.err != "" {
+        match manager.res_code {
+            2 => eprintln!("{}The password provided is not the correct one.{}", Color::RED, Color::REMOVE),
+            _ => eprintln!("Process Error: {}", manager.err),
+        }
         exit(-1);
     }
 
     let mut stdout = stdout().lock();
-
-    let mut win = Window::new(&mut stdout, config::load());
-    let manager = ZipManager::process(&args[1]);
-    if manager.err != "" {
-        eprintln!("Process Error: {}", manager.err);
-        exit(-1);
-    }
+    let mut win = Window::new(&mut stdout, config::load(), password);
 
     win.assing_manager(manager);
 
