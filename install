@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 ubuntu() {
     package=$1
     echo "Ubuntu like:"
@@ -18,12 +20,19 @@ termux() {
     echo -e "\tpkg install $package"
 }
 
-if [[ "$NO_WHICH" == "ACTIVE" ]] || which 7z &> /dev/null; then
-    if [[ "$NO_WHICH" == "ACTIVE" ]] || which cargo &> /dev/null; then
+has() {
+    if [[ "$NO_WHICH" == "ACTIVE" ]]; then
+        return 0
+    fi
+    which "$1" &> /dev/null
+}
+
+if has 7z; then
+    if has cargo; then
         cargo build --release
         if [[ "$NO_ELF_CLEANER" != "ACTIVE" ]] && uname --all | grep "Android" &> /dev/null; then
             echo "Termux detected."
-            if [[ "$NO_WHICH" == "ACTIVE" ]] || which termux-elf-cleaner &> /dev/null; then
+            if has termux-elf-cleaner; then
                 echo "Cleaning elf header with termux-elf-cleaner."
                 termux-elf-cleaner ./target/release/content-7z
             else
@@ -39,7 +48,7 @@ if [[ "$NO_WHICH" == "ACTIVE" ]] || which 7z &> /dev/null; then
 
         mkdir -p ~/.config/
         if ! [ -e "$HOME/.config/content-7z.toml" ]; then
-            cp ./content-7z.toml $HOME/.config/content-7z.toml
+            cp ./content-7z.toml ~/.config/content-7z.toml
         fi
     else
         echo "The rust command need to be installed."
@@ -51,6 +60,7 @@ if [[ "$NO_WHICH" == "ACTIVE" ]] || which 7z &> /dev/null; then
 
         echo "Or in the official wiki:"
         echo -e "\x1b[4mhttps://www.rust-lang.org/es/tools/install\x1b[0m"
+        exit 1
     fi
 else
     echo "The 7z command need to be installed."
@@ -61,4 +71,5 @@ else
     termux "p7zip"
 
     echo "Or how you like to."
+    exit 1
 fi

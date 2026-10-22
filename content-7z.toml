@@ -1,53 +1,58 @@
-#| Catppuccine
+# content-7z configuration file.
+#
+# Colors accept either an RGB triplet, e.g.
+#     text-color = [205, 214, 244]
+# or the body of an ANSI escape sequence, e.g.
+#     text-color = "1;34"
+
+# Catppuccin
 # background-color = [30, 30, 46]
 # text-color = [205, 214, 244]
 # border-color = [69, 71, 90]
 
-# folder-bullet-color = "1;38;2;137;180;250"
-# file-bullet-color = "38;2;180;190;254;1"
-
-#| Tokio Dark
+# Tokio Dark
 # background-color = [17, 18, 29]
 # text-color = [160, 168, 205]
-# border-color = [26, 27, 42]
+# border-color = [74, 80, 87]
 
-# folder-bullet-color = "1;38;2;113;153;238"
-# file-bullet-color = "38;2;238;109;133;1"
-
-#| Rose pine
+# Rose pine
 # text-color = [224, 222, 244]
 # background-color = [25, 23, 36]
 # border-color = [110, 106, 134]
 
-#- Pine moded
-# folder-bullet-color = "1;38;2;64;131;158"
-#- Pine
-# folder-bullet-color = "1;38;2;49;116;143"
-#- Foam
-# folder-bullet-color = "1;38;2;156;207;216"
-# file-bullet-color = "38;2;196;167;216;1"
+# Github Default
+# text-color = [230, 237, 243]
+# background-color = [13, 17, 23]
+# border-color = [110, 118, 129]
 
-#| Dracula
+# Lunaperche
+# text-color = [198, 198, 198]
+# background-color = [0, 0, 0]
+# border-color = [88, 88, 88]
+
+# Dracula
 # text-color = [248, 248, 242]
 # background-color = [40, 42, 54]
 # border-color = [98, 114, 164]
 
-# folder-bullet-color = "1;38;2;139;233;253"
-# file-bullet-color = "38;2;255;121;198;1"
-
-#| Lunaperche
-# text-color = [198, 198, 198]
-# background-color = []
-# border-color = [88, 88, 88]
-
-# folder-bullet-color = "1;38;2;95;175;255"
-# file-bullet-color = "38;2;255;135;255;1"
-
-#| Fancy icons
+# Fancy colored icons
 # folder-bullet = " \ue5fe "
+# folder-bullet-color = "1;34"
+
 # file-bullet = " \uea7b "
+# file-bullet-color = "38;2;88;88;88;1"
 
-multi-choice-helper = "\ny(es) / (no)\n"
+# Editor used to open the files, it may contain arguments.
+# editor = "nvim"
 
-editor = ""
-always-overwrite=false
+# Always re-extract the files, even when they are already cached.
+# always-overwrite = false
+
+# Show the size of the entries in the list.
+# show-size = true
+
+# Show the hidden entries, those that start with a dot.
+# show-hidden = true
+
+# Text shown at the bottom of the confirmation dialogs.
+# multi-choice-dialog-helper = "\ny(es) / n(o)\n"

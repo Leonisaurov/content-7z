@@ -1,16 +1,21 @@
-# Content 7z
-Tool for visualize the content of a 7z file and navigate around the files, all with a friendly TUI.
+# content-7z
 
-[![A look of the tool](https://asciinema.org/a/666845.svg)](https://asciinema.org/a/666845)
+Tool to visualize the content of a 7z file and navigate around the files, all with a friendly TUI.
+
+It browses 7z, zip and tar (also compressed) archives, opens the files with your
+editor, filters the entries and extracts the whole archive, without ever
+leaving the terminal.
 
 ## Index
 1. [Dependencies](#dependencies)
     - [No which](#which)
     - [Clean Elf Header on Termux](#termux-elf-cleaner)
 2. [Usage](#usage)
+    - [Keys](#keys)
 3. [Installation](#install)
 4. [Configurations](#config-file)
-5. [Contribute](contribute)
+5. [Security](#security)
+6. [Contribute](#contribute)
 
 ## Dependencies
 It has 2 important dependencies, rust and the 7z terminal executable.
@@ -28,6 +33,9 @@ apt install p7zip
 ```bash
 pkg install p7zip
 ```
+
+Zip archives can also be listed with `unzip` and tarballs with `tar`, both are
+used as a fallback when `7z` is not available.
 
 It is similar to get rust just follow their [official guide](https://www.rust-lang.org/es/tools/install) by downloading rustup. Or you can try with your package manager:
 - Arch like:
@@ -126,17 +134,39 @@ Type content-7z and a name of a compressed file:
 content-7z any.7z
 ```
 
-You can move around with 2 keys:
-1. Enter, to move into the folder.
-2. Backspace, to go back to the parent folder.
+The archive can also be listed without the interface, or extracted completely:
+```bash
+content-7z --list any.7z
+content-7z --extract ./output any.7z
+```
 
-The mouse can be move with the arrow keys.
-If you want to exit, just press Escape or 'q'.
+Encrypted archives ask for the password, it can also be given with the
+`--password` option or with the `CONTENT_7Z_PASSWORD` environment variable:
+```bash
+content-7z --password secret any.7z
+```
+
+### Keys
+| Key | Action |
+| --- | --- |
+| `up` / `down` | Move the selection |
+| `page up` / `page down` | Move ten positions |
+| `home` / `end` | First or last entry |
+| `enter` / `right` | Open the selected folder |
+| `left` / `backspace` / `-` | Go back to the parent folder |
+| `o` | Open the selected file with the editor |
+| `x` | Extract the whole archive |
+| `/` | Filter the entries by name |
+| `r` | Reload the archive |
+| `?` | Show the help |
+| `q` / `esc` | Quit |
+
+The mouse can be used to move the selection and to scroll.
 
 To open a file, press 'o' while your cursor is over the file to open, it will open in the most specific editor it finds:
 - If there is one defined in the configuration file, it will use that one.
 - If there is not one defined in the configuration file, it will look to see if the environment variable "EDITOR" is defined, if it is, it will use that editor.
-- If none of the above works, it will run the 'editor' binary.
+- If none of the above works, it will look for the usual editors (`nvim`, `vim`, `vi`, `emacs`, `nano`, `micro`, `kak`, `helix`, `code`, `gedit`) in the `PATH`.
 
 You can try 'content-7z' in the compress_examples folder, with compressed files in different formats.
 ```bash
@@ -147,58 +177,25 @@ content-7z any.7z
 ## Config File
 The configuration file, using the toml format, is called "content-7z.toml", and is located in "$HOME/.config/content-7z.toml".
 A basic configuration file will be created automatically when installing the program.
-```toml
-# Catppuccine
-# background-color = [30, 30, 46]
-# text-color = [205, 214, 244]
-# border-color = [69, 71, 90]
 
-# Tokio Dark
-# background-color = [17, 18, 29]
-# text-color = [160, 168, 205]
-# border-color = [74, 80, 87]
-
-# Rose pine
-# text-color = [224, 222, 244]
-# background-color = [25, 23, 36]
-# border-color = [110, 106, 134]
-
-# Github Default
-# text-color = [230, 237, 243]
-# background-color = [13, 17, 23]
-# border-color = [110, 118, 129]
-
-# Lunaperche
-# text-color = [198, 198, 198]
-# background-color = []
-# border-color = [88, 88, 88]
-
-# Fancy colored icons
-# folder-bullet = " \ue5fe "
-# folder-bullet-color = "1;34"
-
-# file-bullet = " \uea7b "
-# file-bullet-color = "38;2;88;88;88;1"
-
-# editor = ""
-```
-
-You can uncomment some lines of the configuration file to set the properties and test the themes or create your own, it is advisable to uncomment and assign the editor configuration line, "editor", so that content-7z can identify which editor to use specifically.
-
-It has 8 customizable properties, which can be text strings, or rgb colors (defined as a list of 3 numbers) depending on which property it is:
-- background-color (default: [0, 0, 0, 0])
+It has 9 customizable properties, which can be text strings, booleans, or rgb colors (defined as a list of 3 numbers) depending on which property it is:
+- background-color (default: the color of the terminal)
 - text-color (default: [200, 200, 200])
-- border-color (default: [255, 255, 255, 255])
-- folder-bullet (default: "[+]")
+- border-color (default: [255, 255, 255])
+- folder-bullet (default: "[+] ")
 - folder-bullet-color (default: [200, 200, 200])
 - file-bullet (default: "--- ")
 - file-bullet-color (default: [200, 200, 200])
 - editor to use (default: "")
+- always-overwrite (default: false), extract the files again even when they are cached
+- show-size (default: true), show the size of the entries
+- show-hidden (default: true), show the entries that start with a dot
+- multi-choice-dialog-helper (default: "y(es) / n(o)"), the text of the confirmation dialogs
 
 Colors can be defined in 2 ways:
 1. RGB: a list of 3 numbers representing red, green and blue,  ranging from:
 ```toml
-*-color = [0, 0, 0, 0]
+*-color = [0, 0, 0]
 ```
 to:
 ```toml
@@ -208,6 +205,26 @@ to:
 ```toml
 *-color = "1;34"
 ```
+
+The supported ansi codes are the usual attributes (`1` bold, `2` dim, `3` italic,
+`4` underline, `7` reverse, ...), the standard and bright colors (`30`..`37`,
+`40`..`47`, `90`..`97`) and the extended ones (`38;5;n`, `48;5;n`, `38;2;r;g;b`
+and `48;2;r;g;b`).
+
+The location of the file can be changed with the `CONTENT_7Z_CONFIG` environment
+variable, and the `XDG_CONFIG_HOME` variable is honored as well.
+
+## Security
+The archives are not trusted input, content-7z takes care of them:
+
+- The paths of the entries are normalized, the ones that try to escape the
+  archive root (with `..`) are discarded.
+- The files are extracted into a private temporary directory, which is removed
+  when the program ends.
+- The password is never passed as an argument, it is written to the standard
+  input of the tool, so it does not show up in the process list.
+- A full extraction is done in a temporary directory and copied with a safe
+  copy that skips the symbolic links pointing outside of it.
 
 ## Contribute
 The repository is completely open to contributions, just make a pull request and as far as possible, I will try to see them and accept them.
