@@ -1,10 +1,23 @@
 [package]
 name = "content-7z"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
+rust-version = "1.74"
+description = "TUI browser for 7z, zip and tar archives"
+license = "MIT"
+readme = "README.md"
+keywords = ["tui", "7z", "archive", "terminal", "viewer"]
+categories = ["command-line-utilities"]
 
 [dependencies]
 config = "0.14.0"
 crossterm = "0.27.0"
 dirs = "5.0.1"
 which = "6.0.1"
+unicode-width = "0.1.13"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = true
