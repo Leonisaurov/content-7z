@@ -35,23 +35,21 @@ pub struct Window<'a> {
 
 impl<'a> Drop for Window<'a> {
     fn drop(&mut self) {
-        terminal::disable_raw_mode().unwrap();
+        let _ = terminal::disable_raw_mode();
         unsafe {
-            (&mut (*self.writer)).queue(terminal::LeaveAlternateScreen).unwrap();
+            let _ = (&mut (*self.writer)).queue(terminal::LeaveAlternateScreen);
         }
 
         self.handler.take();
-        if self.tmp_dir != "" {
-            if let Err(_) = remove_dir_all(self.tmp_dir.clone()) {
-                // TODO
-            }
+        if !self.tmp_dir.is_empty() {
+            let _ = remove_dir_all(self.tmp_dir.clone());
         }
     }
 }
 
 impl<'a> Window<'a> {
     pub fn new(stdout: *mut StdoutLock<'a>, config: Config, file_password: Option<&str>) -> Self {
-        let (width, height) = terminal::size().unwrap();
+        let (width, height) = terminal::size().unwrap_or((80, 24));
 
         let mut window = Self {
             root: Folder::new(""),
@@ -102,10 +100,11 @@ impl<'a> Window<'a> {
     } 
 
     pub fn get_current(&self) -> &Folder {
-        if self.current.len() == 0 {
-
+        if self.current.is_empty() {
+            &self.root
+        } else {
+            &self.current[self.current.len() - 1]
         }
-        &self.current[self.current.len() - 1]
     }
     
     pub fn set_current(&mut self, folder: Folder) {
@@ -197,8 +196,8 @@ impl<'a> Window<'a> {
     }
 
     pub fn set_size(&mut self, x: u16, y: u16) {
-        self.width = x;
-        self.height = y;
+        self.width = x.max(10);
+        self.height = y.max(5);
     }
 
     pub fn set_scheme(&mut self, scheme: Scheme) {

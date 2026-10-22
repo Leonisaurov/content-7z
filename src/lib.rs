@@ -15,3 +15,4 @@ pub mod zip_manager {
 }
 
 pub mod config;
+pub mod error;

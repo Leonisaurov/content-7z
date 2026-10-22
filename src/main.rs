@@ -35,7 +35,7 @@ impl fmt::Display for Color {
 }
 
 fn print_header(win: &Window) {
-    let fill_all_block = "─".repeat(usize::from(win.width) - 2);
+    let fill_all_block = "─".repeat(usize::from(win.width.saturating_sub(2)));
     let stdout = unsafe { &mut (*win.writer) };
     let path = win.get_path() + win.plain_current().as_str();
 
@@ -48,16 +48,17 @@ fn print_header(win: &Window) {
     stdout.queue(Clear(ClearType::CurrentLine)).unwrap();
     stdout.write(win.scheme.border_color.repr.as_bytes()).unwrap();
     stdout.write("│".as_bytes()).unwrap();
-    if path.len() > (win.width - 2).into() {
+    if path.len() > usize::from(win.width.saturating_sub(2)) {
         stdout.write(win.scheme.text_color.repr.as_bytes()).unwrap();
         stdout.write("...".as_bytes()).unwrap();
-        stdout.write(&path.as_bytes()[path.len() - usize::from(win.width - 5)..path.len()]).unwrap();
+        let start = path.len().saturating_sub(usize::from(win.width.saturating_sub(5)));
+        stdout.write(&path.as_bytes()[start..path.len()]).unwrap();
     } else {
         stdout.write(win.scheme.text_color.repr.as_bytes()).unwrap();
         stdout.write(path.as_bytes()).unwrap();
     }
 
-    stdout.queue(MoveTo(win.width - 1, 1)).unwrap();
+    stdout.queue(MoveTo(win.width.saturating_sub(1), 1)).unwrap();
     stdout.write(win.scheme.border_color.repr.as_bytes()).unwrap();
     stdout.write("│".as_bytes()).unwrap();
 
@@ -68,7 +69,7 @@ fn print_header(win: &Window) {
 }
 
 fn print_menu(win: &Window) {
-    let fill_all_block = "─".repeat(usize::from(win.width) - 2);
+    let fill_all_block = "─".repeat(usize::from(win.width.saturating_sub(2)));
     let stdout = unsafe { &mut (*win.writer) };
 
     stdout.queue(MoveTo(0, 3)).unwrap();
@@ -76,14 +77,21 @@ fn print_menu(win: &Window) {
     stdout.write(win.scheme.border_color.repr.as_bytes()).unwrap();
     stdout.write(("┌".to_string() + fill_all_block.as_str() + "┐").as_bytes()).unwrap();
 
+    let selected_index = usize::from(win.cursor.y.saturating_sub(4)) + usize::from(win.scroll_y);
+
     for i in 4..win.height {
         stdout.queue(MoveTo(0, i)).unwrap();
         stdout.queue(terminal::Clear(ClearType::CurrentLine)).unwrap();
         stdout.write(win.scheme.border_color.repr.as_bytes()).unwrap();
         stdout.write("│".as_bytes()).unwrap();
 
-        if win.get_current().content.len() > (i - 4 + win.scroll_y).into() {
-            let entry = &win.get_current().content[usize::from(i - 4 + win.scroll_y)];
+        let entry_index = usize::from(i - 4) + usize::from(win.scroll_y);
+        if win.get_current().content.len() > entry_index {
+            let entry = &win.get_current().content[entry_index];
+            let is_selected = !win.on_dialog && entry_index == selected_index;
+            if is_selected {
+                stdout.write(b"\x1b[7m").unwrap();
+            }
             let _ = match entry {
                 Entry::File(file_name) => {
                     stdout.write(NOCOLOR).unwrap();
@@ -91,6 +99,9 @@ fn print_menu(win: &Window) {
                     stdout.write(win.scheme.file_bullet_color.repr.as_bytes()).unwrap();
                     stdout.write(win.scheme.file_bullet.as_bytes()).unwrap();
                     stdout.write(NOCOLOR).unwrap();
+                    if is_selected {
+                        stdout.write(b"\x1b[7m").unwrap();
+                    }
                     stdout.write(win.scheme.background_color.repr.as_bytes()).unwrap();
                     stdout.write(win.scheme.text_color.repr.as_bytes()).unwrap();
                     stdout.write(file_name.as_bytes()).unwrap()
@@ -101,19 +112,26 @@ fn print_menu(win: &Window) {
                     stdout.write(win.scheme.folder_bullet_color.repr.as_bytes()).unwrap();
                     stdout.write(win.scheme.folder_bullet.as_bytes()).unwrap();
                     stdout.write(NOCOLOR).unwrap();
+                    if is_selected {
+                        stdout.write(b"\x1b[7m").unwrap();
+                    }
                     stdout.write(win.scheme.background_color.repr.as_bytes()).unwrap();
                     stdout.write(win.scheme.text_color.repr.as_bytes()).unwrap();
                     stdout.write(folder.name.as_bytes()).unwrap()
                 },
             };
+            if is_selected {
+                stdout.write(NOCOLOR).unwrap();
+                stdout.write(win.scheme.background_color.repr.as_bytes()).unwrap();
+            }
         }
 
-        stdout.queue(MoveTo(win.width - 1, i)).unwrap();
+        stdout.queue(MoveTo(win.width.saturating_sub(1), i)).unwrap();
         stdout.write(win.scheme.border_color.repr.as_bytes()).unwrap();
         stdout.write("│".as_bytes()).unwrap();
     }
 
-    stdout.queue(MoveTo(0, win.height - 1)).unwrap();
+    stdout.queue(MoveTo(0, win.height.saturating_sub(1))).unwrap();
     stdout.write(win.scheme.border_color.repr.as_bytes()).unwrap();
     stdout.write(("└".to_string() + fill_all_block.as_str() + "┘").as_bytes()).unwrap();
     stdout.write(NOCOLOR).unwrap();
@@ -124,12 +142,12 @@ fn show_dialog_raw(win: &mut Window, text: String, helper: Option<&str>) {
 
     let lines_iter = text.split("\n");
     let mut lines = vec![];
-    let mut max_length = 0;
+    let mut max_length = 0u16;
 
     'scanner:
     for line in lines_iter {
-        if line.len() > usize::from(win.width - 8) {
-            max_length = win.width - 8;
+        if line.len() > usize::from(win.width.saturating_sub(8)) {
+            max_length = win.width.saturating_sub(8);
             let mut index: usize = 0;
             loop {
                 if line.len() < usize::from(max_length) + index {
@@ -140,9 +158,9 @@ fn show_dialog_raw(win: &mut Window, text: String, helper: Option<&str>) {
                 lines.push(&line[index..index + usize::from(max_length)]);
                 index += usize::from(max_length);
             }
-        } 
+        }
 
-        if line.len() > usize::from(max_length) {
+        if line.len() as u16 > max_length {
             max_length = line.len() as u16;
         }
         lines.push(line);
@@ -153,8 +171,8 @@ fn show_dialog_raw(win: &mut Window, text: String, helper: Option<&str>) {
     if let Some(label) = helper {
         'scanner:
         for line in label.split('\n') {
-            if line.len() > usize::from(win.width - 8) {
-                max_length = win.width - 8;
+            if line.len() > usize::from(win.width.saturating_sub(8)) {
+                max_length = win.width.saturating_sub(8);
                 let mut index: usize = 0;
                 loop {
                     if line.len() < usize::from(max_length) + index {
@@ -165,9 +183,9 @@ fn show_dialog_raw(win: &mut Window, text: String, helper: Option<&str>) {
                     helper_label.push(&line[index..index + usize::from(max_length)]);
                     index += usize::from(max_length);
                 }
-            } 
+            }
 
-            if line.len() > usize::from(max_length) {
+            if line.len() as u16 > max_length {
                 max_length = line.len() as u16;
             }
             helper_label.push(line);
@@ -245,7 +263,7 @@ fn show_dialog_raw(win: &mut Window, text: String, helper: Option<&str>) {
 
 fn show_dialog(win: &mut Window, text: String) {
     show_dialog_raw(win, text, None);
-} 
+}
 
 fn show_multiple_choice_dialog<T: Handler + 'static>(win: &mut Window, quest: String, handler: T) {
     let helper = win.scheme.multi_choice_dialog_helper.clone();
@@ -257,7 +275,13 @@ fn show_multiple_choice_dialog<T: Handler + 'static>(win: &mut Window, quest: St
 fn show_err_dialog(win: &mut Window, err: &str, exit: bool) {
     show_dialog_raw(win, String::from(err), None);
     if exit {
-        panic!("Error: {}", err);
+        let _ = terminal::disable_raw_mode();
+        unsafe {
+            let w = &mut (*win.writer);
+            let _ = w.queue(terminal::LeaveAlternateScreen);
+            let _ = w.flush();
+        }
+        std::process::exit(1);
     }
 }
 
@@ -270,15 +294,21 @@ fn close_dialog(win: &mut Window) {
 }
 
 fn get_temp_dir(win: &mut Window) -> String {
-    if win.tmp_dir == "" {
+    if win.tmp_dir.is_empty() {
         let output = Command::new("mktemp")
             .args(["-d", "--tmpdir", "content_7z.XXX"])
-            .output()
-            .expect("Getting tmp dir fail.");
-        let tmp_dir = String::from_utf8(output.stdout).expect("Cannot get the tmp dir.");
-        win.tmp_dir = String::from(&tmp_dir[..tmp_dir.len() - 1]);
+            .output();
+        match output {
+            Ok(out) => {
+                let tmp_dir = String::from_utf8_lossy(&out.stdout).to_string();
+                win.tmp_dir = tmp_dir.trim().to_string();
+            }
+            Err(_) => {
+                win.tmp_dir = std::env::temp_dir().to_string_lossy().to_string();
+            }
+        }
     }
-    win.tmp_dir.clone() + "/" + win.get_path().as_str()
+    format!("{}/{}", win.tmp_dir, win.get_path())
 }
 
 fn open_editor(win: &mut Window, file: PathBuf) {
@@ -289,19 +319,24 @@ fn open_editor(win: &mut Window, file: PathBuf) {
     stdout.queue(Clear(ClearType::Purge)).unwrap();
     stdout.flush().unwrap();
 
-    // Opening tmp_dir + path
     if win.scheme.editor.is_empty() {
         show_err_dialog(win, "Content-7z can not assumed any editor.\nDefine one in the config file:\n~/.config/content-7z.toml", false);
         return;
     }
 
     let status = Command::new(win.scheme.editor.clone())
-        .arg(file.to_str().unwrap())
-        .status()
-        .expect("Couldnt open the editor");
+        .arg(file.to_str().unwrap_or(""))
+        .status();
 
-    if status.code().expect("Cannot stablish connection with the editor") != 0 {
-        // TODO
+    match status {
+        Ok(s) => {
+            if !s.success() {
+                show_err_dialog(win, "Editor exited with an error.", false);
+            }
+        }
+        Err(_) => {
+            show_err_dialog(win, "Could not launch the editor.", false);
+        }
     }
 
     let stdout = unsafe {
@@ -320,8 +355,8 @@ fn open_editor(win: &mut Window, file: PathBuf) {
 }
 
 fn extract_an_open_file(win: &mut Window, tmp_dir: String, file_name: String, file: PathBuf, overwrite: bool) {
-    let path = if let Some(path) = file_name.rfind("/") {
-        vec![&file_name[..path + 1], &file_name[path + 1..]]
+    let path = if let Some(pos) = file_name.rfind('/') {
+        vec![&file_name[..pos + 1], &file_name[pos + 1..]]
     } else {
         vec!["/", file_name.as_str()]
     };
@@ -330,60 +365,89 @@ fn extract_an_open_file(win: &mut Window, tmp_dir: String, file_name: String, fi
     let mkdir_status = Command::new("mkdir")
         .args(["-p", (tmp_dir.clone() + path[0]).as_str()])
         .stdout(Stdio::null())
-        .status().expect("Cannot communicate with the terminal");
+        .status();
 
-    if mkdir_status.code().expect("Cannot communicate with the 'mkdir' command") != 0 {
-        // TODO
-        return;
+    match mkdir_status {
+        Ok(s) if s.success() => {}
+        _ => {
+            show_err_dialog(win, "Cannot create extraction directory.", false);
+            return;
+        }
     }
 
     // Extracting the file to: tmp_dir + path[0]
     let win_path = win.get_path();
 
-    let extract_status = match win_path.as_str() {
-        s if s.ends_with(".tar.gz") => {
-            let output_path = format!("{}/{}", tmp_dir, path[0]);
-            let mut extractor_args = vec!["-xzf", win_path.as_str(), "-C", output_path.as_str(), &file_name[1..]];
-            if !overwrite {
-                extractor_args.push("--keep-old-files");
-            }
-
-            Command::new("tar")
-                .args(extractor_args)
-                .stdout(Stdio::null())
-                .status().expect("Cannot execute the extractor")
-        },
-        _ => {
-            let output_path = format!("-o{}/{}", tmp_dir, path[0]);
-            let mut extractor_args: Vec<String> = vec!["e".to_string(), win_path, file_name[1..].to_string(), output_path];
-            if overwrite {
-                extractor_args.push("-y".to_string());
-            }
-
-            if let Some(password) = win.get_file_password() {
-                extractor_args.push(password);
-            }
-
-            Command::new("7z")
+    let extract_status = if win_path.ends_with(".tar.gz") {
+        let output_path = format!("{}/{}", tmp_dir, path[0]);
+        let mut extractor_args = vec!["-xzf", win_path.as_str(), "-C", output_path.as_str(), &file_name[1..]];
+        if !overwrite {
+            extractor_args.push("--keep-old-files");
+        }
+        Command::new("tar")
             .args(extractor_args)
             .stdout(Stdio::null())
-            .status().expect("Cannot execute the extractor.")
-        },
+            .status()
+    } else if win_path.ends_with(".tar") {
+        let output_path = format!("{}/{}", tmp_dir, path[0]);
+        let mut extractor_args = vec!["-xf", win_path.as_str(), "-C", output_path.as_str(), &file_name[1..]];
+        if !overwrite {
+            extractor_args.push("--keep-old-files");
+        }
+        Command::new("tar")
+            .args(extractor_args)
+            .stdout(Stdio::null())
+            .status()
+    } else if win_path.ends_with(".zip") {
+        let output_path = format!("{}/{}", tmp_dir, path[0]);
+        let mut extractor_args: Vec<String> = vec!["-q".to_string(), win_path.clone(), file_name[1..].to_string(), "-d".to_string(), output_path];
+        if overwrite {
+            extractor_args.insert(0, "-o".to_string());
+        } else {
+            extractor_args.insert(0, "-n".to_string());
+        }
+        if let Some(password) = win.get_file_password() {
+            let pw = password.trim_start_matches("-p").to_string();
+            extractor_args.push("-P".to_string());
+            extractor_args.push(pw);
+        }
+        Command::new("unzip")
+            .args(extractor_args)
+            .stdout(Stdio::null())
+            .status()
+    } else {
+        let output_path = format!("-o{}/{}", tmp_dir, path[0]);
+        let mut extractor_args: Vec<String> = vec!["e".to_string(), win_path, file_name[1..].to_string(), output_path];
+        if overwrite {
+            extractor_args.push("-y".to_string());
+        } else {
+            extractor_args.push("-n".to_string());
+        }
+
+        if let Some(password) = win.get_file_password() {
+            extractor_args.push(password);
+        }
+
+        Command::new("7z")
+            .args(extractor_args)
+            .stdout(Stdio::null())
+            .status()
     };
 
-    if extract_status.code().expect("Cannot extract the file from the compress file.") != 0 {
-        // TODO
-        return
+    match extract_status {
+        Ok(s) if s.success() => {}
+        _ => {
+            show_err_dialog(win, "Could not extract the file.", false);
+            return;
+        }
     }
 
     open_editor(win, file);
 }
 
 fn open_file(win: &mut Window, file_name: String) {
-    // Getting the tmp dir for this session
     let tmp_dir = get_temp_dir(win);
-    // Getting a file refence
-    let file = PathBuf::from(tmp_dir.clone() + "/" + file_name.as_str());
+    let file = PathBuf::from(format!("{}/{}", tmp_dir, file_name));
     if !win.scheme.always_overwrite && file.exists() {
         let job = NormalHandler::new(|win, situation, data| {
             if let HandleSituatonType::SUCESS(_) = situation {
@@ -392,14 +456,37 @@ fn open_file(win: &mut Window, file_name: String) {
                 open_editor(win, data.1.clone());
             }
         }, (file_name, file, tmp_dir));
-        show_multiple_choice_dialog(win, String::from("File already extracted, pressent on cache.\nExtract it again?"), job);
+        show_multiple_choice_dialog(win, String::from("File already extracted, present on cache.\nExtract it again?"), job);
         return;
     }
 
     extract_an_open_file(win, tmp_dir, file_name, file, false);
-} 
+}
+
+fn print_help(win: &mut Window) {
+    let text = "Keys:\n\
+↑/↓ navigate\n\
+←/→ scroll\n\
+Enter open folder\n\
+Backspace/- go back\n\
+o open file\n\
+p show path\n\
+h/? help\n\
+q/Esc quit";
+    show_dialog(win, String::from(text));
+}
 
 fn main() {
+    // restore terminal on panic
+    let default_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        let _ = terminal::disable_raw_mode();
+        let mut out = stdout();
+        let _ = out.queue(terminal::LeaveAlternateScreen);
+        let _ = out.flush();
+        default_hook(info);
+    }));
+
     let args: Vec<String> = env::args().collect();
     if args.len() < 2 || args.len() > 3 {
         eprintln!("Usage:\n\t{} {{Compress file}} -p[password]", &args[0]);
@@ -409,7 +496,7 @@ fn main() {
     let need_password = ZipManager::need_password(&args[1]);
     let password = if need_password {
         if args.len() != 3 {
-            eprintln!("No password gived, the file '{}' need one to view the content.", &args[1]);
+            eprintln!("No password given, the file '{}' needs one to view the content.", &args[1]);
             exit(-2);
         }
         let password = &args[2];
@@ -423,7 +510,7 @@ fn main() {
     };
 
     let manager = ZipManager::process(&args[1], password);
-    if manager.err != "" {
+    if manager.err != "" && manager.res_code != 0 {
         match manager.res_code {
             2 => eprintln!("{}The password provided is not the correct one.{}", Color::RED, Color::REMOVE),
             _ => eprintln!("Process Error: {}", manager.err),
@@ -466,16 +553,16 @@ fn main() {
                         KeyCode::Down => win.move_down(),
                         KeyCode::Right => win.move_right(),
                         KeyCode::Left => win.move_left(),
-                        KeyCode::Char('t') => {
-                            show_err_dialog(&mut win, "Hello", true);
+                        KeyCode::Char('h') | KeyCode::Char('?') => {
+                            print_help(&mut win);
                         },
                         KeyCode::Char('p') => {
                             let path = win.plain_current();
                             show_dialog(&mut win, path);
                         },
                         KeyCode::Char('o') => {
-                            if usize::from(win.cursor.y - 4 + win.scroll_y) < win.get_current().content.len() {
-                                if let Entry::File(file_name) = &win.get_current().content[usize::from(win.cursor.y - 4 + win.scroll_y)] {
+                            if usize::from(win.cursor.y.saturating_sub(4) + win.scroll_y) < win.get_current().content.len() {
+                                if let Entry::File(file_name) = &win.get_current().content[usize::from(win.cursor.y.saturating_sub(4) + win.scroll_y)] {
                                     let path = win.plain_current() + "/" + file_name;
                                     let message = format!("Open '{}'?", path);
 
@@ -495,8 +582,9 @@ fn main() {
                         KeyCode::Backspace => win.back_current(),
                         KeyCode::Char('-') => win.back_current(),
                         KeyCode::Enter => {
-                            if usize::from(win.cursor.y - 4 + win.scroll_y) < win.get_current().content.len() {
-                                if let Entry::Folder(dir) = &win.get_current().content[usize::from(win.cursor.y - 4 + win.scroll_y)] {
+                            let idx = usize::from(win.cursor.y.saturating_sub(4) + win.scroll_y);
+                            if idx < win.get_current().content.len() {
+                                if let Entry::Folder(dir) = &win.get_current().content[idx] {
                                     win.set_current(dir.clone());
                                 }
                             }
@@ -517,7 +605,7 @@ fn main() {
 
         if win.scroll_change {
             win.scroll_change = false;
-            print_menu(&mut win);
+            print_menu(&win);
             stdout.queue(MoveTo(win.cursor.x, win.cursor.y)).unwrap();
         }
 
@@ -529,7 +617,7 @@ fn main() {
 
         if win.cursor.need_update {
             win.cursor.need_update = false;
-            let new_y: u16 = (win.get_current().content.len() + 3).try_into().unwrap();
+            let new_y: u16 = (win.get_current().content.len() + 3).try_into().unwrap_or(win.height.saturating_sub(1));
             if !win.on_dialog && win.cursor.y > new_y && new_y != 3 {
                 win.set_cursor(win.cursor.x, new_y);
             }
@@ -538,6 +626,6 @@ fn main() {
 
         stdout.flush().unwrap();
 
-        thread::sleep(Duration::from_millis(30));
+        thread::sleep(Duration::from_millis(16));
     }
 }

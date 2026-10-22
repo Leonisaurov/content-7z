@@ -155,6 +155,8 @@ impl Scheme {
 
         if let Ok(helper) = config.get_string("multi-choice-dialog-helper") {
             scheme.multi_choice_dialog_helper = helper;
+        } else if let Ok(helper) = config.get_string("multi-choice-helper") {
+            scheme.multi_choice_dialog_helper = helper;
         }
 
         if let Ok(editor) = config.get_string("editor") {
@@ -169,7 +171,9 @@ impl Scheme {
                 for editor in identify_editor {
                     match which(editor) {
                         Ok(path) => {
-                            scheme.editor = String::from(path.to_str().unwrap());
+                            if let Some(p) = path.to_str() {
+                                scheme.editor = String::from(p);
+                            }
                             break;
                         },
                         _ => {},

@@ -15,11 +15,15 @@ impl Folder {
     }
 
     pub fn add_file(&mut self, file_name: &str) {
-        self.content.push(Entry::File(file_name.to_string()));
+        if !self.contain_entry(file_name) {
+            self.content.push(Entry::File(file_name.to_string()));
+        }
     }
 
     pub fn add_folder(&mut self, folder: Folder) {
-        self.content.push(Entry::Folder(folder));
+        if !self.contain_entry(&folder.name) {
+            self.content.push(Entry::Folder(folder));
+        }
     }
 
     pub fn get_folder(&mut self, folder_name: &str) -> Option<&mut Folder> {
@@ -33,7 +37,7 @@ impl Folder {
         None
     }
 
-    pub fn contain_entry(&mut self, entry_name: &str) -> bool {
+    pub fn contain_entry(&self, entry_name: &str) -> bool {
         for entry in &self.content {
             match entry {
                 Entry::File(file_name) => {
@@ -51,50 +55,44 @@ impl Folder {
         false
     }
 
-    pub fn add_entry(&mut self, entry: &str, file_type: &EntryType) {
-        for i in 0..entry.len() {
-            if let Some(character) = entry.get(i..i+1) {
-                if character == "/" {
-                    if let Some(path) = entry.get(0..i) {
-                        if self.contain_entry(path) {
-                            if let Some(sub_path) = entry.get(i+1..entry.len()) {
-                                if let Some(folder) = self.get_folder(path) {
-                                    folder.add_entry(sub_path, file_type);
-                                } else {
-                                    let mut new_entry = Folder::new(path);
-                                    new_entry.add_entry(sub_path, file_type);
-                                    self.add_folder(new_entry);
-                                }
-                            } else {
-                                eprintln!("The subdir cannot be get");
-                            }
-                            return;
-                        }
-                        let mut new_entry = Folder::new(path);
-                        if let Some(sub_path) = entry.get(i+1..entry.len()) {
-                            new_entry.add_entry(sub_path, file_type);
-                        }
-                        self.add_folder(new_entry);
+    fn is_safe_component(name: &str) -> bool {
+        !name.is_empty() && name != "." && name != ".." && !name.contains('\0')
+    }
 
-                    } else {
-                        eprintln!("The subdir cannot be get");
-                    }
-                    return;
-                }
-            }
+    pub fn add_entry(&mut self, entry: &str, file_type: &EntryType) {
+        // Normalize: strip leading separators and reject traversal.
+        let entry = entry.trim_start_matches('/');
+        if entry.is_empty() {
+            return;
+        }
+        let parts: Vec<&str> = entry.split('/').filter(|p| !p.is_empty()).collect();
+        if parts.iter().any(|p| !Self::is_safe_component(p)) {
+            return;
         }
 
-        if let EntryType::Folder = file_type {
-            self.add_folder(Folder::new(entry))
+        if parts.len() == 1 {
+            if let EntryType::Folder = file_type {
+                self.add_folder(Folder::new(parts[0]));
+            } else {
+                self.add_file(parts[0]);
+            }
+            return;
+        }
+
+        let head = parts[0];
+        let rest = parts[1..].join("/");
+        if let Some(folder) = self.get_folder(head) {
+            folder.add_entry(&rest, file_type);
         } else {
-            self.add_file(entry);
+            let mut new_entry = Folder::new(head);
+            new_entry.add_entry(&rest, file_type);
+            self.add_folder(new_entry);
         }
     }
 
-
     pub fn strace(&self, indent: usize) {
         let indent_char = " ".repeat(indent);
-        println!("{}Folder: {}", " ".repeat(indent - 1) + "└┬", self.name);
+        println!("{}Folder: {}", " ".repeat(indent.saturating_sub(1)) + "└┬", self.name);
         let mut i = 0;
         for entry in &self.content {
             match entry {
